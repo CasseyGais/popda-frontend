@@ -126,8 +126,8 @@ export default function UserInfoCard({ role }: UserInfoCardProps) {
       }
       
       // Field instansi
-      formDataToSend.append("emailInstansi", formData.email);
-      formDataToSend.append("phoneInstansi", formData.nomorTelepon);
+      formDataToSend.append("email_instansi", formData.email);
+      formDataToSend.append("phone_instansi", formData.nomorTelepon);
 
       const response = await api.put("/admin/identitas", formDataToSend, {
         headers: {

@@ -1,0 +1,2487 @@
+{
+	"info": {
+		"_postman_id": "popda-2026-collection",
+		"name": "POPDA 2026 API",
+		"description": "Complete API collection for POPDA 2026 Backend System",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"superadmin@popda.id\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["login"]
+						}
+					},
+					"response": [
+						{
+							"name": "Login Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"superadmin@popda.id\",\n  \"password\": \"password123\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/login",
+									"host": ["{{baseUrl}}"],
+									"path": ["login"]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"data\": {\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"user\": {\n      \"id\": 1,\n      \"name\": \"Super Admin Dispora\",\n      \"email\": \"superadmin@popda.id\",\n      \"is_active\": true,\n      \"created_at\": \"2026-02-11T07:58:38Z\",\n      \"avatar\": null\n    }\n  }\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Master Data",
+			"item": [
+				{
+					"name": "Cabor",
+					"item": [
+						{
+							"name": "Get All Cabor",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/admin/master/cabor",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "master", "cabor"]
+								}
+							},
+							"response": [
+								{
+									"name": "Get All Cabor Success",
+									"originalRequest": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{token}}"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/admin/master/cabor",
+											"host": ["{{baseUrl}}"],
+											"path": ["admin", "master", "cabor"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										}
+									],
+									"cookie": [],
+									"body": "{\n  \"success\": true,\n  \"message\": \"Data cabor berhasil diambil\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"nama\": \"Bulutangkis\",\n      \"max_putra\": 10,\n      \"max_putri\": 10,\n      \"max_pelatih\": 2,\n      \"is_active\": true,\n      \"created_at\": \"2026-02-11T07:58:38Z\",\n      \"updated_at\": \"2026-02-11T07:58:38Z\"\n    }\n  ]\n}"
+								}
+							]
+						},
+						{
+							"name": "Get Cabor by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/admin/master/cabor/1",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "master", "cabor", "1"]
+								}
+							}
+						},
+						{
+							"name": "Create Cabor",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"nama\": \"Tenis Meja\",\n  \"max_putra\": 8,\n  \"max_putri\": 8,\n  \"max_pelatih\": 2,\n  \"is_active\": true\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/admin/master/cabor",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "master", "cabor"]
+								}
+							},
+							"response": [
+								{
+									"name": "Create Cabor Success",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"nama\": \"Tenis Meja\",\n  \"max_putra\": 8,\n  \"max_putri\": 8,\n  \"max_pelatih\": 2,\n  \"is_active\": true\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/admin/master/cabor",
+											"host": ["{{baseUrl}}"],
+											"path": ["admin", "master", "cabor"]
+										}
+									},
+									"status": "Created",
+									"code": 201,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										}
+									],
+									"cookie": [],
+									"body": "{\n  \"success\": true,\n  \"message\": \"Cabor berhasil dibuat\",\n  \"data\": {\n    \"id\": 2,\n    \"nama\": \"Tenis Meja\",\n    \"max_putra\": 8,\n    \"max_putri\": 8,\n    \"max_pelatih\": 2,\n    \"is_active\": true,\n    \"created_at\": \"2026-03-08T05:43:00Z\",\n    \"updated_at\": \"2026-03-08T05:43:00Z\"\n  }\n}"
+								}
+							]
+						},
+						{
+							"name": "Update Cabor",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"nama\": \"Tenis Meja\",\n  \"max_putra\": 10,\n  \"max_putri\": 10,\n  \"max_pelatih\": 3,\n  \"is_active\": true\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/admin/master/cabor/2",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "master", "cabor", "2"]
+								}
+							}
+						},
+						{
+							"name": "Delete Cabor",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/admin/master/cabor/2",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "master", "cabor", "2"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Nomor",
+					"item": [
+						{
+							"name": "Get All Nomor",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/admin/master/nomor",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "master", "nomor"]
+								}
+							}
+						},
+						{
+							"name": "Get Nomor by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/admin/master/nomor/1",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "master", "nomor", "1"]
+								}
+							}
+						},
+						{
+							"name": "Get Nomor by Cabor ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/admin/master/nomor/cabor/1",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "master", "nomor", "cabor", "1"]
+								}
+							}
+						},
+						{
+							"name": "Create Nomor",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"cabor_id\": 1,\n  \"nama\": \"Tunggal Putra\",\n  \"jenis_kelamin\": \"PUTRA\",\n  \"is_active\": true\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/admin/master/nomor",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "master", "nomor"]
+								}
+							}
+						},
+						{
+							"name": "Update Nomor",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"nama\": \"Tunggal Putra Senior\",\n  \"jenis_kelamin\": \"PUTRA\",\n  \"is_active\": true\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/admin/master/nomor/1",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "master", "nomor", "1"]
+								}
+							}
+						},
+						{
+							"name": "Delete Nomor",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/admin/master/nomor/1",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "master", "nomor", "1"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Sekolah",
+					"item": [
+						{
+							"name": "Get All Sekolah",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/admin/master/sekolah",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "master", "sekolah"]
+								}
+							}
+						},
+						{
+							"name": "Get Sekolah by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/admin/master/sekolah/1",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "master", "sekolah", "1"]
+								}
+							}
+						},
+						{
+							"name": "Search Sekolah",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/admin/master/sekolah/search?q=SMAN",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "master", "sekolah", "search"],
+									"query": [
+										{
+											"key": "q",
+											"value": "SMAN"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Create Sekolah",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"nama\": \"SMAN 1 Tangerang\",\n  \"alamat\": \"Jl. Contoh No. 123\",\n  \"telepon\": \"02112345678\",\n  \"email\": \"sman1.tangerang@example.com\",\n  \"jenis\": \"SMA\",\n  \"is_active\": true\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/admin/master/sekolah",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "master", "sekolah"]
+								}
+							}
+						},
+						{
+							"name": "Update Sekolah",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"nama\": \"SMAN 1 Tangerang Selatan\",\n  \"alamat\": \"Jl. Baru No. 456\",\n  \"telepon\": \"02187654321\",\n  \"email\": \"sman1.tangsel@example.com\",\n  \"jenis\": \"SMA\",\n  \"is_active\": true\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/admin/master/sekolah/1",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "master", "sekolah", "1"]
+								}
+							}
+						},
+						{
+							"name": "Delete Sekolah",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/admin/master/sekolah/1",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "master", "sekolah", "1"]
+								}
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Atlet",
+			"item": [
+				{
+					"name": "Get All Atlet",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/atlet",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "atlet"]
+						}
+					}
+				},
+				{
+					"name": "Get Atlet by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/atlet/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "atlet", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get Atlet by Kontingen ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/atlet/kontingen/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "atlet", "kontingen", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get Atlet by Sekolah ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/atlet/sekolah/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "atlet", "sekolah", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get Atlet by Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/atlet/status/PENDING",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "atlet", "status", "PENDING"]
+						}
+					}
+				},
+				{
+					"name": "Create Atlet",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"kontingen_id\": 1,\n  \"sekolah_id\": 1,\n  \"nisn\": \"1234567890\",\n  \"nama\": \"John Doe\",\n  \"jenis_kelamin\": \"PUTRA\",\n  \"tanggal_lahir\": \"2005-01-15\",\n  \"kelas\": \"XII-IPA-1\",\n  \"tinggi\": 170,\n  \"berat\": 65.5,\n  \"foto\": \"/uploads/atlet/john_doe.jpg\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/atlet",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "atlet"]
+						}
+					}
+				},
+				{
+					"name": "Update Atlet",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"kontingen_id\": 1,\n  \"sekolah_id\": 1,\n  \"nisn\": \"1234567890\",\n  \"nama\": \"John Doe Updated\",\n  \"jenis_kelamin\": \"PUTRA\",\n  \"tanggal_lahir\": \"2005-01-15\",\n  \"kelas\": \"XII-IPA-2\",\n  \"tinggi\": 172,\n  \"berat\": 67.0,\n  \"foto\": \"/uploads/atlet/john_doe_updated.jpg\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/atlet/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "atlet", "1"]
+						}
+					}
+				},
+				{
+					"name": "Delete Atlet",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/atlet/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "atlet", "1"]
+						}
+					}
+				},
+				{
+					"name": "Update Atlet Status",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status_verifikasi\": \"VALID\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/atlet/1/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "atlet", "1", "status"]
+						}
+					}
+				},
+				{
+					"name": "Update Atlet Foto",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"foto\": \"/uploads/atlet/new_photo.jpg\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/atlet/1/foto",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "atlet", "1", "foto"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Kontingen Identitas",
+			"item": [
+				{
+					"name": "Get All Kontingen Identitas",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/kontingen-identitas",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "kontingen-identitas"]
+						}
+					}
+				},
+				{
+					"name": "Get Kontingen Identitas by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/kontingen-identitas/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "kontingen-identitas", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get Kontingen Identitas by Kontingen ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/kontingen-identitas/kontingen/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "kontingen-identitas", "kontingen", "1"]
+						}
+					}
+				},
+				{
+					"name": "Create Kontingen Identitas",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"kontingen_id\": 1,\n  \"kepala_nama\": \"Bejo Sutisna\",\n  \"kepala_jabatan\": \"Ketua Kontingen\",\n  \"kepala_nip\": \"1234567890\",\n  \"kepala_telepon\": \"+628979819142\",\n  \"kepala_foto\": \"/uploads/kepala/bejo.jpg\",\n  \"pic_nama\": \"John Doe\",\n  \"pic_jabatan\": \"PIC Kontingen\",\n  \"pic_telepon\": \"+628123456789\",\n  \"pic_foto\": \"/uploads/pic/john_doe.jpg\",\n  \"alamat\": \"Jl. Contoh No. 123\",\n  \"email_instansi\": \"kontingen@example.com\",\n  \"phone_instansi\": \"+628987654321\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/kontingen-identitas",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "kontingen-identitas"]
+						}
+					}
+				},
+				{
+					"name": "Update Kontingen Identitas",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"kepala_nama\": \"Bejo Sutisna Updated\",\n  \"kepala_jabatan\": \"Ketua Kontingen\",\n  \"kepala_nip\": \"1234567890\",\n  \"kepala_telepon\": \"+628979819142\",\n  \"kepala_foto\": \"/uploads/kepala/bejo_updated.jpg\",\n  \"pic_nama\": \"John Doe\",\n  \"pic_jabatan\": \"PIC Kontingen\",\n  \"pic_telepon\": \"+628123456789\",\n  \"pic_foto\": \"/uploads/pic/john_doe.jpg\",\n  \"alamat\": \"Jl. Baru No. 456\",\n  \"email_instansi\": \"kontingen@example.com\",\n  \"phone_instansi\": \"+628987654321\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/kontingen-identitas/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "kontingen-identitas", "1"]
+						}
+					}
+				},
+				{
+					"name": "Delete Kontingen Identitas",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/kontingen-identitas/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "kontingen-identitas", "1"]
+						}
+					}
+				},
+				{
+					"name": "Update Kepala Foto",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"foto\": \"/uploads/kepala/new_kepala_photo.jpg\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/kontingen-identitas/1/kepala-foto",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "kontingen-identitas", "1", "kepala-foto"]
+						}
+					}
+				},
+				{
+					"name": "Update PIC Foto",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"foto\": \"/uploads/pic/new_pic_photo.jpg\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/kontingen-identitas/1/pic-foto",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "kontingen-identitas", "1", "pic-foto"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Master Official",
+			"item": [
+				{
+					"name": "Get All Master Official",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/master-official",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "master-official"]
+						}
+					}
+				},
+				{
+					"name": "Get Master Official by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/master-official/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "master-official", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get Master Official by Kontingen ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/master-official/kontingen/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "master-official", "kontingen", "1"]
+						}
+					}
+				},
+				{
+					"name": "Create Master Official",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"kontingen_id\": 1,\n  \"nama\": \"Dr. Budi Santoso\",\n  \"jabatan\": \"Official Team\",\n  \"no_hp\": \"+628123456789\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/master-official",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "master-official"]
+						}
+					}
+				},
+				{
+					"name": "Update Master Official",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nama\": \"Dr. Budi Santoso Updated\",\n  \"jabatan\": \"Head Official\",\n  \"no_hp\": \"+628987654321\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/master-official/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "master-official", "1"]
+						}
+					}
+				},
+				{
+					"name": "Delete Master Official",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/master-official/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "master-official", "1"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Master Pelatih",
+			"item": [
+				{
+					"name": "Get All Master Pelatih",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/master-pelatih",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "master-pelatih"]
+						}
+					}
+				},
+				{
+					"name": "Get Master Pelatih by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/master-pelatih/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "master-pelatih", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get Master Pelatih by Kontingen ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/master-pelatih/kontingen/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "master-pelatih", "kontingen", "1"]
+						}
+					}
+				},
+				{
+					"name": "Create Master Pelatih",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"kontingen_id\": 1,\n  \"nama\": \"Coach Ahmad\",\n  \"no_hp\": \"+628123456789\",\n  \"sertifikat\": \"/uploads/sertifikat/ahmad.pdf\",\n  \"foto\": \"/uploads/pelatih/ahmad.jpg\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/master-pelatih",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "master-pelatih"]
+						}
+					}
+				},
+				{
+					"name": "Update Master Pelatih",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nama\": \"Coach Ahmad Updated\",\n  \"no_hp\": \"+628987654321\",\n  \"sertifikat\": \"/uploads/sertifikat/ahmad_updated.pdf\",\n  \"foto\": \"/uploads/pelatih/ahmad_updated.jpg\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/master-pelatih/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "master-pelatih", "1"]
+						}
+					}
+				},
+				{
+					"name": "Delete Master Pelatih",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/master-pelatih/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "master-pelatih", "1"]
+						}
+					}
+				},
+				{
+					"name": "Update Pelatih Foto",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"foto\": \"/uploads/pelatih/new_photo.jpg\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/master-pelatih/1/foto",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "master-pelatih", "1", "foto"]
+						}
+					}
+				},
+				{
+					"name": "Update Pelatih Sertifikat",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sertifikat\": \"/uploads/sertifikat/new_sertifikat.pdf\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/master-pelatih/1/sertifikat",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "master-pelatih", "1", "sertifikat"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Permissions",
+			"item": [
+				{
+					"name": "Get All Permissions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/permissions",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "permissions"]
+						}
+					}
+				},
+				{
+					"name": "Get Permission by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/permissions/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "permissions", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get Permissions by Role ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/permissions/role/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "permissions", "role", "1"]
+						}
+					}
+				},
+				{
+					"name": "Create Permission",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"dashboard.view\",\n  \"description\": \"Melihat dashboard statistik\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/permissions",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "permissions"]
+						}
+					}
+				},
+				{
+					"name": "Update Permission",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"dashboard.view\",\n  \"description\": \"Melihat dashboard statistik dan laporan\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/permissions/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "permissions", "1"]
+						}
+					}
+				},
+				{
+					"name": "Delete Permission",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/permissions/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "permissions", "1"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Roles",
+			"item": [
+				{
+					"name": "Get All Roles",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/roles",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "roles"]
+						}
+					}
+				},
+				{
+					"name": "Get Role by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/roles/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "roles", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get Roles by User ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/roles/user/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "roles", "user", "1"]
+						}
+					}
+				},
+				{
+					"name": "Create Role",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"SUPERADMIN\",\n  \"description\": \"Admin pusat Dispora Provinsi\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/roles",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "roles"]
+						}
+					}
+				},
+				{
+					"name": "Update Role",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"SUPERADMIN\",\n  \"description\": \"Admin pusat Dispora Provinsi dengan full access\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/roles/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "roles", "1"]
+						}
+					}
+				},
+				{
+					"name": "Delete Role",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/roles/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "roles", "1"]
+						}
+					}
+				},
+				{
+					"name": "Assign Permission to Role",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/roles/1/permissions/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "roles", "1", "permissions", "1"]
+						}
+					}
+				},
+				{
+					"name": "Remove Permission from Role",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/roles/1/permissions/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "roles", "1", "permissions", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get Role Permissions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/roles/1/permissions",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "roles", "1", "permissions"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Territories",
+			"item": [
+				{
+					"name": "Get All Territories",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/territories",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "territories"]
+						}
+					}
+				},
+				{
+					"name": "Get Territory by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/territories/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "territories", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get Territories by Type",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/territories/type/PROVINSI",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "territories", "type", "PROVINSI"]
+						}
+					}
+				},
+				{
+					"name": "Get Provinces",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/territories/provinces",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "territories", "provinces"]
+						}
+					}
+				},
+				{
+					"name": "Get Kabupatens",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/territories/kabupatens",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "territories", "kabupatens"]
+						}
+					}
+				},
+				{
+					"name": "Get Kotas",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/territories/kotas",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "territories", "kotas"]
+						}
+					}
+				},
+				{
+					"name": "Get Territories by User ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/territories/user/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "territories", "user", "1"]
+						}
+					}
+				},
+				{
+					"name": "Create Territory",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Kabupaten Tangerang\",\n  \"type\": \"KABUPATEN\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/territories",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "territories"]
+						}
+					}
+				},
+				{
+					"name": "Update Territory",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Kabupaten Tangerang Selatan\",\n  \"type\": \"KABUPATEN\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/territories/2",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "territories", "2"]
+						}
+					}
+				},
+				{
+					"name": "Delete Territory",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/territories/2",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "territories", "2"]
+						}
+					}
+				},
+				{
+					"name": "Assign Territory to User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/territories/user/1/territory/2",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "territories", "user", "1", "territory", "2"]
+						}
+					}
+				},
+				{
+					"name": "Remove Territory from User",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/territories/user/1/territory/2",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "territories", "user", "1", "territory", "2"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/users",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "users"]
+						}
+					}
+				},
+				{
+					"name": "Get User by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "users", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get User by Email",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/email/superadmin@popda.id",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "users", "email", "superadmin@popda.id"]
+						}
+					}
+				},
+				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"New Admin\",\n  \"email\": \"newadmin@popda.id\",\n  \"password\": \"password123\",\n  \"avatar\": \"/avatar/user2.svg\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/users",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "users"]
+						}
+					}
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Admin\",\n  \"email\": \"updatedadmin@popda.id\",\n  \"password\": \"newpassword123\",\n  \"avatar\": \"/avatar/updated_user.svg\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/2",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "users", "2"]
+						}
+					}
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/2",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "users", "2"]
+						}
+					}
+				},
+				{
+					"name": "Update User Avatar",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"avatar\": \"/avatar/new_avatar.png\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/1/avatar",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "users", "1", "avatar"]
+						}
+					}
+				},
+				{
+					"name": "Update User Password",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"password\": \"newsecurepassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/1/password",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "users", "1", "password"]
+						}
+					}
+				},
+				{
+					"name": "Update User Status",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"is_active\": false\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/1/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "users", "1", "status"]
+						}
+					}
+				},
+				{
+					"name": "Get User Roles",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/1/roles",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "users", "1", "roles"]
+						}
+					}
+				},
+				{
+					"name": "Assign Role to User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/1/roles/2",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "users", "1", "roles", "2"]
+						}
+					}
+				},
+				{
+					"name": "Remove Role from User",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/1/roles/2",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "users", "1", "roles", "2"]
+						}
+					}
+				},
+				{
+					"name": "Get User Territories",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/1/territories",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "users", "1", "territories"]
+						}
+					}
+				},
+				{
+					"name": "Assign Territory to User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/1/territories/2",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "users", "1", "territories", "2"]
+						}
+					}
+				},
+				{
+					"name": "Remove Territory from User",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/1/territories/2",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "users", "1", "territories", "2"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Transaksi",
+			"item": [
+				{
+					"name": "Kontingen Cabor",
+					"item": [
+						{
+							"name": "Create Trx Kontingen Cabor",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kontingen_id\": 1,\n  \"cabor_id\": 1\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/admin/trx/cabor",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "trx", "cabor"]
+								}
+							}
+						},
+						{
+							"name": "Get Trx Kontingen Cabor",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/admin/trx/cabor",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "trx", "cabor"]
+								}
+							}
+						},
+						{
+							"name": "Update Trx Kontingen Cabor",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kontingen_id\": 1,\n  \"cabor_id\": 1\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/admin/trx/cabor",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "trx", "cabor"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Kontingen Nomor",
+					"item": [
+						{
+							"name": "Create Trx Kontingen Nomor",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"kontingen_id\": 1,\n  \"nomor_id\": 1\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/admin/trx/nomor",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "trx", "nomor"]
+								}
+							}
+						},
+						{
+							"name": "Get Trx Kontingen Nomor",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/admin/trx/nomor",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "trx", "nomor"]
+								}
+							}
+						},
+						{
+							"name": "Delete Trx Kontingen Nomor",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/admin/trx/nomor/1",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "trx", "nomor", "1"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Pendaftaran Atlet",
+					"item": [
+						{
+							"name": "Create Trx Pendaftaran Atlet",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"atlet_id\": 1,\n  \"nomor_id\": 1\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/admin/trx/atlet",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "trx", "atlet"]
+								}
+							}
+						},
+						{
+							"name": "Get Trx Pendaftaran Atlet",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/admin/trx/atlet",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "trx", "atlet"]
+								}
+							}
+						},
+						{
+							"name": "Update Trx Pendaftaran Atlet",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"atlet_id\": 1,\n  \"nomor_id\": 1\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/admin/trx/atlet/1/1",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "trx", "atlet", "1", "1"]
+								}
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Tahap",
+			"item": [
+				{
+					"name": "Tahap 1",
+					"item": [
+						{
+							"name": "Get Tahap 1",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/admin/tahap1",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "tahap1"]
+								}
+							}
+						},
+						{
+							"name": "Update Tahap 1",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/admin/tahap1",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "tahap1"]
+								}
+							}
+						},
+						{
+							"name": "Submit Tahap 1",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/admin/tahap1/submit",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "tahap1", "submit"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Tahap 2",
+					"item": [
+						{
+							"name": "Get Tahap 2",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/admin/tahap2",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "tahap2"]
+								}
+							}
+						},
+						{
+							"name": "Update Tahap 2",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/admin/tahap2",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "tahap2"]
+								}
+							}
+						},
+						{
+							"name": "Submit Tahap 2",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/admin/tahap2/submit",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "tahap2", "submit"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Tahap 3",
+					"item": [
+						{
+							"name": "Get Tahap 3",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/admin/tahap3",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "tahap3"]
+								}
+							}
+						},
+						{
+							"name": "Submit Tahap 3",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/admin/tahap3/submit",
+									"host": ["{{baseUrl}}"],
+									"path": ["admin", "tahap3", "submit"]
+								}
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Kontingen",
+			"item": [
+				{
+					"name": "Get Identitas",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/identitas",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "identitas"]
+						}
+					}
+				},
+				{
+					"name": "Update Identitas",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/identitas",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "identitas"]
+						}
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

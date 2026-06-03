@@ -9,10 +9,18 @@ export default defineConfig({
     svgr({
       svgrOptions: {
         icon: true,
-        // This will transform your SVG to a React component
         exportType: "named",
         namedExport: "ReactComponent",
       },
     }),
   ],
+  server: {
+    proxy: {
+      // Proxy /uploads ke backend agar gambar bisa dimuat tanpa CORS issue
+      "/uploads": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+    },
+  },
 });

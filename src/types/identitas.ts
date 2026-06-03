@@ -1,5 +1,5 @@
 // src/types/identitas.ts
-// Interface sesuai backend IdentitasKontingen
+// Interface sesuai backend KontingenIdentitas
 export interface IdentitasKontingen {
   id: number;
   kontingen_id: number;
@@ -22,6 +22,5 @@ export interface IdentitasKontingen {
   email_instansi: string;
   phone_instansi: string;
   
-  status: string;
   updated_at: string;
 }

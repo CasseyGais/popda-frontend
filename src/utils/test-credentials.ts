@@ -30,6 +30,14 @@ export function hashPassword(password: string): string {
   return password;
 }
 
+/** Hash string menggunakan SHA-256 via Web Crypto API (async) */
+export async function sha256(text: string): Promise<string> {
+  const msgBuffer = new TextEncoder().encode(text);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 // API endpoints berdasarkan backend
 export const API_ENDPOINTS = {
   LOGIN: '/login',

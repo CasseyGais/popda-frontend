@@ -24,11 +24,19 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired atau invalid
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      localStorage.removeItem("role");
-      window.location.href = "/auth/signin";
+      const url: string = error.config?.url ?? "";
+      const isLoginEndpoint = url === "/login" || url.endsWith("/login");
+
+      if (!isLoginEndpoint) {
+        // Token expired atau invalid — redirect ke login
+        localStorage.removeItem("token");
+        localStorage.removeItem("user_data");
+        localStorage.removeItem("user");
+        localStorage.removeItem("role");
+        window.location.href = "/login";
+      }
+      // Untuk endpoint login: biarkan error diteruskan ke caller
+      // agar LoginPage bisa tampilkan "Email atau password salah"
     }
     return Promise.reject(error);
   }

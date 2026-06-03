@@ -64,8 +64,8 @@ export default function UserAddressCard() {
 
       // WAJIB sesuai handler backend Anda
       formDataToSend.append("alamat", formData.alamatInstansi);
-      formDataToSend.append("emailInstansi", formData.emailResmi);
-      formDataToSend.append("phoneInstansi", formData.nomorTeleponInstansi);
+      formDataToSend.append("email_instansi", formData.emailResmi);
+      formDataToSend.append("phone_instansi", formData.nomorTeleponInstansi);
 
       const response = await api.put(
         "/admin/identitas",

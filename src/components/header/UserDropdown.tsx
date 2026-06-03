@@ -1,17 +1,34 @@
 // src/components/header/UserDropdown.tsx
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { useAuth } from "../../context/AuthContext";
 
 export default function UserDropdown() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
-  const API_URL = "http://localhost:8000"; // Ganti dengan env di production
+  const API_URL = "http://localhost:8000";
 
   const toggleDropdown = () => setIsOpen(!isOpen);
   const closeDropdown = () => setIsOpen(false);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Logout gagal:", error);
+    } finally {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      closeDropdown();
+
+      navigate("/login", { replace: true });
+    }
+  };
 
   if (!user) {
     return (
@@ -23,12 +40,13 @@ export default function UserDropdown() {
   }
 
   // Foto profil dari backend + fallback
-let profilePic = "/images/user/default-avatar.png";
-if (user.avatar) {
-  profilePic = `${API_URL}${user.avatar}`;
-}
+  let profilePic = "/images/user/default-avatar.png";
 
-  // Initials untuk fallback
+  if (user.avatar) {
+    profilePic = `${API_URL}${user.avatar}`;
+  }
+
+  // Initials fallback
   const initials = user.name
     ? user.name
         .split(" ")
@@ -65,6 +83,7 @@ if (user.avatar) {
         <span className="block mr-1 font-medium text-theme-sm">
           {user.name || "Pengguna"}
         </span>
+
         <svg
           className={`stroke-gray-500 dark:stroke-gray-400 transition-transform duration-200 ${
             isOpen ? "rotate-180" : ""
@@ -94,6 +113,7 @@ if (user.avatar) {
           <span className="block font-medium text-gray-700 text-theme-sm dark:text-gray-400">
             {user.name || "Pengguna"}
           </span>
+
           <span className="mt-0.5 block text-theme-xs text-gray-500 dark:text-gray-400">
             {user.email || "email@kontingen.id"}
           </span>
@@ -122,16 +142,14 @@ if (user.avatar) {
                   fill=""
                 />
               </svg>
+
               Edit Profil
             </DropdownItem>
           </li>
         </ul>
 
         <button
-          onClick={() => {
-            logout();
-            closeDropdown();
-          }}
+          onClick={handleLogout}
           className="flex items-center gap-3 px-3 py-2 mt-3 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
         >
           <svg
@@ -149,6 +167,7 @@ if (user.avatar) {
               fill=""
             />
           </svg>
+
           Keluar
         </button>
       </Dropdown>

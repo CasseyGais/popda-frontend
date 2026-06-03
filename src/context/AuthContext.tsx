@@ -1,219 +1,170 @@
-// src/context/AuthContext.tsx
+import React, {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+} from "react";
 
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
-
-import api from "../lib/api";
-
-
+export interface Territory {
+  id: number;
+  name: string;
+  type: "PROVINSI" | "KABUPATEN" | "KOTA";
+}
 
 export interface User {
-
   id: number;
-
   name: string;
-
   email: string;
-
   is_active: boolean;
-
-  kab_kota: string;
-
-  avatar?: string;
-
+  created_at: string;
+  avatar: string | null;
+  role?: {
+    name: string;
+  };
+  kab_kota?: string;
+  territories?: Territory[];
 }
-
-
 
 interface AuthContextType {
-
   user: User | null;
-
-  role: string | null;
-
   token: string | null;
-
+  permissions: string[];
   isLoading: boolean;
-
-  login: (
-
-    email: string,
-
-    password: string
-
-  ) => Promise<{ success: boolean; error?: string }>;
-
+  login: (token: string, user: User, role?: string) => Promise<void>;
   logout: () => void;
-
+  isAuthenticated: boolean;
+  can: (permission: string) => boolean;
 }
-
-
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/** Fetch permissions dari backend setelah login */
+async function fetchPermissions(
+  token: string,
+  userId: number,
+  roleName: string
+): Promise<string[]> {
+  // SUPERADMIN bypass — wildcard
+  const name = roleName.toLowerCase().replace(/[_\s]/g, "");
+  if (name === "superadmin") return ["*"];
 
+  try {
+    // 1. Ambil role IDs user
+    const rolesRes = await fetch(
+      `http://localhost:8000/admin/users/${userId}/roles`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const rolesData = await rolesRes.json();
+    const roleIds: number[] = Array.isArray(rolesData.data) ? rolesData.data : [];
+    if (roleIds.length === 0) return [];
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+    // 2. Ambil permission dari role pertama
+    const permRes = await fetch(
+      `http://localhost:8000/admin/permissions/role/${roleIds[0]}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const permData = await permRes.json();
+    const perms: string[] = Array.isArray(permData.data)
+      ? permData.data.map((p: { name: string }) => p.name)
+      : [];
+    return perms;
+  } catch (err) {
+    console.warn("[AuthContext] Gagal fetch permissions:", err);
+    return [];
+  }
+}
 
-  const [user, setUser] = useState<User | null>(null);
-
-  const [role, setRole] = useState<string | null>(null);
-
-  const [token, setToken] = useState<string | null>(null);
-
-  const [isLoading, setIsLoading] = useState(true);
-
-
-
-  useEffect(() => {
-
-    const storedUser = localStorage.getItem("user");
-
-    const storedToken = localStorage.getItem("token");
-
-    const storedRole = localStorage.getItem("role");
-
-
-
-    if (storedUser && storedToken && storedRole) {
-
-      const parsedUser = JSON.parse(storedUser);
-
-      setUser(parsedUser);
-
-      setToken(storedToken);
-
-      setRole(storedRole);
-
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [user, setUser]             = useState<User | null>(null);
+  const [token, setToken]           = useState<string | null>(null);
+  const [isLoading, setIsLoading]   = useState(true);
+  const [permissions, setPermissions] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("permissions");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
     }
+  });
 
+  // Restore session dari localStorage
+  useEffect(() => {
+    const storedToken       = localStorage.getItem("token");
+    const storedUser        = localStorage.getItem("user_data");
+    const storedPermissions = localStorage.getItem("permissions");
 
-
+    if (storedToken && storedUser) {
+      setToken(storedToken);
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {
+        localStorage.removeItem("user_data");
+      }
+      if (storedPermissions) {
+        try {
+          setPermissions(JSON.parse(storedPermissions));
+        } catch {
+          setPermissions([]);
+        }
+      }
+    } else {
+      setPermissions([]);
+      localStorage.removeItem("permissions");
+    }
+    // Selesai restore — aman untuk render route
     setIsLoading(false);
-
   }, []);
 
+  /**
+   * login() dipanggil dari LoginPage setelah berhasil dapat token.
+   * Otomatis fetch permissions setelah set token.
+   * role param dari response.data.role (string) dipakai untuk deteksi superadmin.
+   */
+  const login = async (newToken: string, newUser: User, role?: string): Promise<void> => {
+    setToken(newToken);
+    setUser(newUser);
+    localStorage.setItem("token", newToken);
+    localStorage.setItem("user_data", JSON.stringify(newUser));
 
+    // Resolve role name — bisa dari arg, atau dari newUser.role.name
+    const roleName = role ?? newUser.role?.name ?? "";
 
-  const login = async (email: string, password: string) => {
-
-    try {
-
-      console.log("Attempting login with:", email);
-
-      const response = await api.post("/login", {
-
-        email,
-
-        password,
-
-      });
-
-
-
-      console.log("Login response:", response.data);
-
-      const { token, user, role } = response.data;
-
-
-
-      localStorage.setItem("token", token);
-
-      localStorage.setItem("user", JSON.stringify(user));
-
-      localStorage.setItem("role", role);
-
-
-
-      console.log("Stored in localStorage:", {
-
-        token: token ? "EXISTS" : "NULL",
-
-        user: JSON.stringify(user),
-
-        role
-
-      });
-
-
-
-      setUser(user);
-
-      setToken(token);
-
-      setRole(role);
-
-
-
-      console.log("State updated:", { user, token, role });
-
-
-
-      return { success: true };
-
-    } catch (error: any) {
-
-      console.error("Login error:", error);
-
-      return {
-
-        success: false,
-
-        error: error.response?.data?.error || "Login gagal",
-
-      };
-
-    }
-
+    const perms = await fetchPermissions(newToken, newUser.id, roleName);
+    localStorage.setItem("permissions", JSON.stringify(perms));
+    setPermissions(perms);
   };
-
-
 
   const logout = () => {
-
-    localStorage.removeItem("token");
-
-    localStorage.removeItem("user");
-
-    localStorage.removeItem("role");
-
-    setUser(null);
-
     setToken(null);
-
-    setRole(null);
-
+    setUser(null);
+    setPermissions([]);
+    localStorage.removeItem("token");
+    localStorage.removeItem("user_data");
+    localStorage.removeItem("permissions");
   };
 
+  /** Cek satu permission. Wildcard '*' (SUPERADMIN) selalu true. */
+  const can = (permission: string): boolean => {
+    if (permissions.includes("*")) return true;
+    return permissions.includes(permission);
+  };
 
+  const isAuthenticated = !!token && !!user;
 
   return (
-
-    <AuthContext.Provider value={{ user, role, token, isLoading, login, logout }}>
-
+    <AuthContext.Provider
+      value={{ user, token, permissions, isLoading, login, logout, isAuthenticated, can }}
+    >
       {children}
-
     </AuthContext.Provider>
-
   );
+};
 
-}
-
-
-
-export function useAuth() {
-
+export const useAuth = () => {
   const context = useContext(AuthContext);
-
-
-
-  if (!context) {
-
-    throw new Error("useAuth harus digunakan dalam AuthProvider");
-
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
   }
-
-
-
   return context;
-
-}
+};

@@ -8,6 +8,7 @@ import { ReactComponent as ErrorIcon } from "./info-error.svg?react";
 import { ReactComponent as BoltIcon } from "./bolt.svg?react";
 import { ReactComponent as ArrowUpIcon } from "./arrow-up.svg?react";
 import { ReactComponent as ArrowDownIcon } from "./arrow-down.svg?react";
+import { ReactComponent as ArrowLeftIcon } from "./angle-left.svg?react";
 import { ReactComponent as FolderIcon } from "./folder.svg?react";
 import { ReactComponent as VideoIcon } from "./videos.svg?react";
 import { ReactComponent as AudioIcon } from "./audio.svg?react";
@@ -58,6 +59,10 @@ import { ReactComponent as ErrorHexaIcon } from "./info-hexa.svg?react";
 // Tambahan baru: FormIcon
 import { ReactComponent as FormIcon } from "./form.svg?react";
 
+// Alias untuk icons yang lebih umum
+export const EditIcon = PencilIcon;
+export const TrashIcon = TrashBinIcon;
+
 export {
   ErrorHexaIcon,
   AlertHexaIcon,
@@ -76,6 +81,7 @@ export {
   InfoIcon,
   ErrorIcon,
   ArrowUpIcon,
+  ArrowLeftIcon,
   FolderIcon,
   ArrowDownIcon,
   ArrowRightIcon,
@@ -115,5 +121,5 @@ export {
   ChatIcon,
   AngleLeftIcon,
   AngleRightIcon,
-  FormIcon,          // ← ditambahkan di sini
+  FormIcon
 };
