@@ -13,6 +13,8 @@ import AtletModal from "../components/AtletModal";
 import PelatihModal from "../components/PelatihModal";
 import OfficialModal from "../components/OfficialModal";
 import TrxModal from "../components/TrxModal";
+import ExportButtons from "../../../components/ui/ExportButtons";
+import { exportTahap3PDF, exportTahap3Excel } from "../../../utils/exportHelper";
 
 // ─── Types & helpers ──────────────────────────────────────
 
@@ -106,9 +108,9 @@ function RowActions({ onView, onEdit, onDelete, onDaftar }: {
 // ─── Main Page ────────────────────────────────────────────
 
 export default function MainPage() {
-  const { user, can }        = useAuth();
-  const { currentTerritory } = useTerritory();
-  const isSuperAdmin         = checkSuperAdmin(user);
+  const { user, can, token }   = useAuth();
+  const { currentTerritory }   = useTerritory();
+  const isSuperAdmin           = checkSuperAdmin(user);
 
   /**
    * KUNCI: superadmin TIDAK pakai kontingen_id dari JWT (nilainya 0).
@@ -233,6 +235,18 @@ export default function MainPage() {
     }
   };
 
+  const kontigenName = isSuperAdmin
+    ? (currentTerritory?.name ?? "kontingen")
+    : (user?.name ?? "kontingen");
+
+  const hasData = atlets.length > 0 || pelatihs.length > 0 || officials.length > 0;
+
+  const handleExportPDF = () =>
+    exportTahap3PDF(token!, kontigenName, territoryId);
+
+  const handleExportExcel = () =>
+    exportTahap3Excel(token!, kontigenName, territoryId);
+
   // ── Superadmin gate ────────────────────────────────────
   if (isSuperAdmin && !currentTerritory) {
     return (
@@ -279,6 +293,12 @@ export default function MainPage() {
                   Official: {officials.length}
                 </span>
               </div>
+            )}
+            {!loading && hasData && (
+              <ExportButtons
+                onExportPDF={handleExportPDF}
+                onExportExcel={handleExportExcel}
+              />
             )}
             {!loading && <StatusBadge status={tahap3Status} />}
           </div>

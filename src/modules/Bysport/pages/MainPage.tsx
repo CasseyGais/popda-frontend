@@ -14,6 +14,8 @@ import {
   Tahap1Status,
 } from "../service";
 import CaborEntryModal from "../components/Modal";
+import ExportButtons from "../../../components/ui/ExportButtons";
+import { exportTahap1PDF, exportTahap1Excel } from "../../../utils/exportHelper";
 
 export interface CaborEntry {
   cabor_id: number;
@@ -59,9 +61,9 @@ function StatusBadge({ status }: { status: Tahap1Status }) {
 }
 
 export default function MainPage() {
-  const { user, can }        = useAuth();
-  const { currentTerritory } = useTerritory();
-  const isSuperAdmin         = checkSuperAdmin(user);
+  const { user, can, token }   = useAuth();
+  const { currentTerritory }   = useTerritory();
+  const isSuperAdmin           = checkSuperAdmin(user);
 
   const [masterCabor, setMasterCabor]     = useState<MasterCabor[]>([]);
   const [trxCabor, setTrxCabor]           = useState<TrxKontingenCabor[]>([]);
@@ -175,6 +177,17 @@ export default function MainPage() {
   const totalPelatih  = entries.reduce((s, e) => s + e.pelatih, 0);
   const totalPersonel = entries.reduce((s, e) => s + e.total_personel, 0);
 
+  // Nama kontingen untuk nama file export
+  const kontigenName = isSuperAdmin
+    ? (currentTerritory?.name ?? "kontingen")
+    : (user?.name ?? "kontingen");
+
+  const handleExportPDF = () =>
+    exportTahap1PDF(token!, kontigenName, territoryId);
+
+  const handleExportExcel = () =>
+    exportTahap1Excel(token!, kontigenName, territoryId);
+
   /* ── Superadmin belum pilih territory ───────────────── */
   if (isSuperAdmin && !currentTerritory) {
     return (
@@ -210,7 +223,15 @@ export default function MainPage() {
               </p>
             )}
           </div>
-          {!loading && <StatusBadge status={tahap1Status} />}
+          <div className="flex items-center gap-3 flex-wrap">
+            {!loading && entries.length > 0 && (
+              <ExportButtons
+                onExportPDF={handleExportPDF}
+                onExportExcel={handleExportExcel}
+              />
+            )}
+            {!loading && <StatusBadge status={tahap1Status} />}
+          </div>
         </div>
 
         {/* Banner submitted */}

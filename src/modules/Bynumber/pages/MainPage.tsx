@@ -12,6 +12,8 @@ import {
   NomorItem,
   Tahap2Status,
 } from "../service";
+import ExportButtons from "../../../components/ui/ExportButtons";
+import { exportTahap2PDF, exportTahap2Excel } from "../../../utils/exportHelper";
 
 // ─── helpers ─────────────────────────────────────────────
 
@@ -54,9 +56,9 @@ function StatusBadge({ status }: { status: Tahap2Status }) {
 
 export default function MainPage() {
   const navigate = useNavigate();
-  const { user, can }        = useAuth();
-  const { currentTerritory } = useTerritory();
-  const isSuperAdmin         = checkSuperAdmin(user);
+  const { user, can, token }   = useAuth();
+  const { currentTerritory }   = useTerritory();
+  const isSuperAdmin           = checkSuperAdmin(user);
 
   const [nomorList, setNomorList]       = useState<NomorItem[]>([]);
   const [tahap2Status, setTahap2Status] = useState<Tahap2Status>("DRAFT");
@@ -162,6 +164,16 @@ export default function MainPage() {
   const isSubmitted    = tahap2Status === "SUBMITTED";
   const canSubmit      = !isSubmitted && totalTerdaftar > 0;
 
+  const kontigenName = isSuperAdmin
+    ? (currentTerritory?.name ?? "kontingen")
+    : (user?.name ?? "kontingen");
+
+  const handleExportPDF = () =>
+    exportTahap2PDF(token!, kontigenName, territoryId);
+
+  const handleExportExcel = () =>
+    exportTahap2Excel(token!, kontigenName, territoryId);
+
   // ── Superadmin belum pilih territory ───────────────────
   if (isSuperAdmin && !currentTerritory) {
     return (
@@ -197,9 +209,17 @@ export default function MainPage() {
               </p>
             )}
           </div>
-          {!loading && error !== "tahap1_belum_submit" && (
-            <StatusBadge status={tahap2Status} />
-          )}
+          <div className="flex items-center gap-3 flex-wrap">
+            {!loading && nomorList.length > 0 && error !== "tahap1_belum_submit" && (
+              <ExportButtons
+                onExportPDF={handleExportPDF}
+                onExportExcel={handleExportExcel}
+              />
+            )}
+            {!loading && error !== "tahap1_belum_submit" && (
+              <StatusBadge status={tahap2Status} />
+            )}
+          </div>
         </div>
 
         {/* Banner submitted */}
