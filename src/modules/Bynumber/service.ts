@@ -26,8 +26,13 @@ export interface Tahap2Response {
   success: boolean;
   message: string;
   data: {
+    kontingen_id?: number;
+    territory_id?: number;
+    nama_kontingen?: string;
     tahap2_status: Tahap2Status;
     tahap2_submitted_at: string | null;
+    tahap2_validasi_status?: "PENDING" | "VALID" | "REVISI" | null;
+    tahap2_validasi_catatan?: string | null;
     nomor_list: NomorItem[];
   };
 }

@@ -2,16 +2,18 @@
  * TrxModal — Modal pendaftaran transaksi
  *
  * Dropdown cabor hanya menampilkan cabor yang sudah dipilih kontingen di Tahap 1.
- * Dropdown nomor hanya menampilkan nomor dari cabor yang dipilih.
- * Nama nomor ditampilkan di daftar "Sudah Terdaftar" (bukan "Nomor #ID").
+ * Dropdown nomor hanya menampilkan nomor yang sudah dicentang kontingen di Tahap 2.
  *
- * Endpoints:
- * - GET /admin/tahap1      → cabor yang dipilih kontingen (filter dropdown)
- * - GET /admin/master/cabor → nama cabor
- * - GET /admin/master/nomor/cabor/:id → nomor per cabor + nama
- * - GET /admin/tahap3      → existing trx (satu-satunya GET trx)
- * - POST /admin/tahap3/trx/atlet|pelatih|official
- * - DELETE /admin/tahap3/trx/atlet|pelatih|official/:id
+ * Endpoints (sesuai TAHAP3_DOCUMENTATION.md section 4):
+ * - GET /admin/tahap3/cabor        → cabor terpilih dari tahap 1 (filter dropdown)
+ * - GET /admin/tahap3/nomor        → nomor terdaftar dari tahap 2 (dropdown assign atlet)
+ * - GET /admin/tahap3             → existing trx list
+ * - POST /admin/tahap3/trx/atlet  → daftarkan atlet ke cabor+nomor
+ * - POST /admin/master/pelatih/trx → daftarkan pelatih ke cabor
+ * - POST /admin/master/official/trx → daftarkan official
+ * - DELETE /admin/tahap3/trx/atlet/:id
+ * - DELETE /admin/master/pelatih/trx/:id
+ * - DELETE /admin/master/official/trx/:id
  */
 import { useState, useEffect } from "react";
 import { Modal } from "../../../components/ui/modal";
@@ -27,45 +29,46 @@ import {
 
 // ─── Local types ──────────────────────────────────────────
 
-interface MasterCabor {
-  id: number;
-  nama: string;
-  is_active: boolean;
+/** Cabor terpilih dari GET /admin/tahap3/cabor */
+interface CaborTerpilih {
+  cabor_id: number;
+  nama_cabor: string;
 }
 
-interface MasterNomor {
-  id: number;
+/** Nomor terdaftar dari GET /admin/tahap3/nomor */
+interface NomorTerdaftar {
+  nomor_id: number;
   cabor_id: number;
-  nama: string;
+  nama_cabor: string;
+  nama_nomor: string;
   jenis_kelamin: "PUTRA" | "PUTRI" | "CAMPURAN";
   tipe: "INDIVIDU" | "BEREGU";
-  is_active: boolean;
 }
 
 // ─── API helpers ──────────────────────────────────────────
 
-/** Semua master cabor (aktif) — untuk lookup nama */
-const getMasterCabor = (): Promise<{ data: MasterCabor[] }> =>
-  api.get("/admin/master/cabor").then(r => r.data);
-
-/** Nomor per cabor — untuk dropdown dan lookup nama */
-const getMasterNomorByCabor = (caborId: number): Promise<{ data: MasterNomor[] }> =>
-  api.get(`/admin/master/nomor/cabor/${caborId}`).then(r => r.data);
-
 /**
- * GET /admin/tahap1 — cabor yang sudah dipilih kontingen.
- * Hanya cabor ini yang boleh muncul di dropdown.
- * territoryId wajib untuk superadmin.
+ * GET /admin/tahap3/cabor
+ * Cabor yang dipilih kontingen di Tahap 1. Untuk filter dropdown.
+ * Sesuai TAHAP3_DOCUMENTATION.md section 4.
  */
-const getTahap1CaborIds = async (territoryId?: number): Promise<number[]> => {
+const getTahap3Cabor = (territoryId?: number): Promise<{ data: CaborTerpilih[] }> => {
   const params = territoryId ? { territory_id: territoryId } : {};
-  const res = await api.get("/admin/tahap1", { params });
-  const caborList = res.data?.data?.cabor_list ?? [];
-  return caborList.map((c: { cabor_id: number }) => c.cabor_id);
+  return api.get("/admin/tahap3/cabor", { params }).then(r => r.data);
 };
 
 /**
- * GET /admin/tahap3 — satu-satunya cara dapat existing trx list.
+ * GET /admin/tahap3/nomor
+ * Nomor yang dicentang kontingen di Tahap 2. Untuk dropdown assign atlet.
+ * Sesuai TAHAP3_DOCUMENTATION.md section 4.
+ */
+const getTahap3Nomor = (territoryId?: number): Promise<{ data: NomorTerdaftar[] }> => {
+  const params = territoryId ? { territory_id: territoryId } : {};
+  return api.get("/admin/tahap3/nomor", { params }).then(r => r.data);
+};
+
+/**
+ * GET /admin/tahap3 — untuk ambil existing trx list.
  * territoryId wajib untuk superadmin.
  */
 const getTahap3Overview = (territoryId?: number): Promise<{
@@ -95,12 +98,12 @@ interface Props {
 // ─── Component ───────────────────────────────────────────
 
 export default function TrxModal({ isOpen, onClose, type, person, territoryId }: Props) {
-  // Hanya cabor yang sudah dipilih di Tahap 1
-  const [cabors, setCabors]   = useState<MasterCabor[]>([]);
-  // Nomor dari cabor yang dipilih di dropdown
-  const [nomors, setNomors]   = useState<MasterNomor[]>([]);
-  // Cache semua nomor yang pernah dimuat (untuk resolve nama di trx list)
-  const [nomorCache, setNomorCache] = useState<Map<number, MasterNomor>>(new Map());
+  // Cabor terpilih dari tahap 1 — via GET /admin/tahap3/cabor
+  const [cabors, setCabors]   = useState<CaborTerpilih[]>([]);
+  // Semua nomor terdaftar dari tahap 2 — via GET /admin/tahap3/nomor
+  const [allNomors, setAllNomors] = useState<NomorTerdaftar[]>([]);
+  // Nomor yang difilter berdasarkan cabor yang dipilih di dropdown
+  const [filteredNomors, setFilteredNomors] = useState<NomorTerdaftar[]>([]);
   const [trxList, setTrxList] = useState<(TrxAtlet | TrxPelatih | TrxOfficial)[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving]   = useState(false);
@@ -115,39 +118,25 @@ export default function TrxModal({ isOpen, onClose, type, person, territoryId }:
     setError("");
     setSelCabor(0);
     setSelNomor(0);
-    setNomors([]);
+    setFilteredNomors([]);
     loadAll();
   }, [isOpen, type, person.id]);
 
   const loadAll = async () => {
     setLoading(true);
     try {
-      // 1. Ambil cabor_id yang dipilih di Tahap 1
-      // 2. Ambil semua master cabor (untuk nama)
-      // 3. Ambil existing trx
-      const [tahap1CaborIds, caborRes, overviewRes] = await Promise.all([
-        getTahap1CaborIds(territoryId),
-        getMasterCabor(),
+      // Sesuai TAHAP3_DOCUMENTATION.md section 4:
+      // - /admin/tahap3/cabor  → cabor terpilih dari tahap 1
+      // - /admin/tahap3/nomor  → nomor terdaftar dari tahap 2
+      // - /admin/tahap3        → trx list
+      const [caborRes, nomorRes, overviewRes] = await Promise.all([
+        getTahap3Cabor(territoryId),
+        getTahap3Nomor(territoryId),
         getTahap3Overview(territoryId),
       ]);
 
-      // Filter: hanya cabor yang ada di Tahap 1
-      const allCabors = caborRes.data?.filter(c => c.is_active) || [];
-      const filteredCabors = allCabors.filter(c => tahap1CaborIds.includes(c.id));
-      setCabors(filteredCabors);
-
-      // Build nomor cache dari semua cabor yang dipilih di Tahap 1
-      // agar nama nomor bisa di-resolve di trx list
-      const cacheMap = new Map<number, MasterNomor>();
-      await Promise.all(
-        tahap1CaborIds.map(async (caborId) => {
-          try {
-            const r = await getMasterNomorByCabor(caborId);
-            (r.data || []).forEach(n => cacheMap.set(n.id, n));
-          } catch { /* ignore */ }
-        })
-      );
-      setNomorCache(cacheMap);
+      setCabors(caborRes.data || []);
+      setAllNomors(nomorRes.data || []);
 
       // Filter trx berdasarkan person.id
       const ov = overviewRes.data;
@@ -165,23 +154,17 @@ export default function TrxModal({ isOpen, onClose, type, person, territoryId }:
     }
   };
 
-  // ── Load nomor saat cabor dipilih di dropdown ─────────
-  const handleCaborChange = async (caborId: number) => {
+  // ── Filter nomor saat cabor dipilih di dropdown ───────
+  const handleCaborChange = (caborId: number) => {
     setSelCabor(caborId);
     setSelNomor(0);
-    setNomors([]);
-    if (!caborId) return;
-    try {
-      const r = await getMasterNomorByCabor(caborId);
-      const aktif = r.data?.filter(n => n.is_active) || [];
-      setNomors(aktif);
-      // Update cache
-      setNomorCache(prev => {
-        const next = new Map(prev);
-        aktif.forEach(n => next.set(n.id, n));
-        return next;
-      });
-    } catch { /* ignore */ }
+    if (!caborId) {
+      setFilteredNomors([]);
+      return;
+    }
+    // Filter dari nomor yang sudah terdaftar di tahap 2, sesuai cabor yang dipilih
+    const filtered = allNomors.filter(n => n.cabor_id === caborId);
+    setFilteredNomors(filtered);
   };
 
   // ── Daftarkan ─────────────────────────────────────────
@@ -195,14 +178,14 @@ export default function TrxModal({ isOpen, onClose, type, person, territoryId }:
     }
     setSaving(true);
     try {
-      if (type === "atlet")        await daftarAtlet(person.id, selCabor, selNomor);
-      else if (type === "pelatih") await daftarPelatih(person.id, selCabor);
-      else                         await daftarOfficial(person.id);
+      if (type === "atlet")        await daftarAtlet(person.id, selCabor, selNomor, territoryId);
+      else if (type === "pelatih") await daftarPelatih(person.id, selCabor, territoryId);
+      else                         await daftarOfficial(person.id, territoryId);
 
       await loadAll();
       setSelCabor(0);
       setSelNomor(0);
-      setNomors([]);
+      setFilteredNomors([]);
     } catch (e: any) {
       setError(e.message || "Gagal mendaftarkan");
     } finally {
@@ -215,9 +198,9 @@ export default function TrxModal({ isOpen, onClose, type, person, territoryId }:
     if (!confirm("Batalkan pendaftaran ini?")) return;
     setSaving(true);
     try {
-      if (type === "atlet")        await batalDaftarAtlet(trxId);
-      else if (type === "pelatih") await batalDaftarPelatih(trxId);
-      else                         await batalDaftarOfficial(trxId);
+      if (type === "atlet")        await batalDaftarAtlet(trxId, territoryId);
+      else if (type === "pelatih") await batalDaftarPelatih(trxId, territoryId);
+      else                         await batalDaftarOfficial(trxId, territoryId);
       setTrxList(prev => prev.filter(t => t.id !== trxId));
     } catch (e: any) {
       setError(e.message || "Gagal membatalkan");
@@ -228,12 +211,12 @@ export default function TrxModal({ isOpen, onClose, type, person, territoryId }:
 
   // ── Lookup helpers ────────────────────────────────────
   const getCaborName = (id: number) =>
-    cabors.find(c => c.id === id)?.nama ?? `Cabor #${id}`;
+    cabors.find(c => c.cabor_id === id)?.nama_cabor ?? `Cabor #${id}`;
 
   const getNomorLabel = (nomorId: number) => {
-    const n = nomorCache.get(nomorId);
+    const n = allNomors.find(x => x.nomor_id === nomorId);
     if (!n) return `Nomor #${nomorId}`;
-    return `${n.nama} — ${n.jenis_kelamin} (${n.tipe})`;
+    return `${n.nama_nomor} — ${n.jenis_kelamin} (${n.tipe})`;
   };
 
   const title = type === "atlet"   ? "Daftarkan Atlet ke Nomor"
@@ -274,7 +257,7 @@ export default function TrxModal({ isOpen, onClose, type, person, territoryId }:
                 </p>
               )}
 
-              {/* Dropdown cabor — hanya dari Tahap 1 */}
+              {/* Dropdown cabor — dari GET /admin/tahap3/cabor */}
               {(type === "atlet" || type === "pelatih") && (
                 <div>
                   <Label>
@@ -290,28 +273,31 @@ export default function TrxModal({ isOpen, onClose, type, person, territoryId }:
                       onChange={e => handleCaborChange(Number(e.target.value))}
                       className="w-full h-11 rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 dark:border-gray-700 dark:text-white dark:bg-gray-900">
                       <option value={0}>-- Pilih Cabor --</option>
-                      {cabors.map(c => <option key={c.id} value={c.id}>{c.nama}</option>)}
+                      {cabors.map(c => <option key={c.cabor_id} value={c.cabor_id}>{c.nama_cabor}</option>)}
                     </select>
                   )}
                 </div>
               )}
 
-              {/* Dropdown nomor — muncul setelah cabor dipilih */}
+              {/* Dropdown nomor — dari GET /admin/tahap3/nomor, difilter per cabor */}
               {type === "atlet" && selCabor > 0 && (
                 <div>
-                  <Label>Nomor Pertandingan <span className="text-red-500">*</span></Label>
-                  {nomors.length === 0 ? (
+                  <Label>
+                    Nomor Pertandingan <span className="text-red-500">*</span>
+                    <span className="ml-1 text-xs font-normal text-gray-400">(dari Tahap 2)</span>
+                  </Label>
+                  {filteredNomors.length === 0 ? (
                     <p className="text-xs text-gray-400 mt-1">
-                      Tidak ada nomor aktif untuk cabor ini.
+                      Tidak ada nomor terdaftar untuk cabor ini di Tahap 2.
                     </p>
                   ) : (
                     <select value={selNomor}
                       onChange={e => setSelNomor(Number(e.target.value))}
                       className="w-full h-11 rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 dark:border-gray-700 dark:text-white dark:bg-gray-900">
                       <option value={0}>-- Pilih Nomor --</option>
-                      {nomors.map(n => (
-                        <option key={n.id} value={n.id}>
-                          {n.nama} — {n.jenis_kelamin} ({n.tipe})
+                      {filteredNomors.map(n => (
+                        <option key={n.nomor_id} value={n.nomor_id}>
+                          {n.nama_nomor} — {n.jenis_kelamin} ({n.tipe})
                         </option>
                       ))}
                     </select>
@@ -319,7 +305,7 @@ export default function TrxModal({ isOpen, onClose, type, person, territoryId }:
                 </div>
               )}
 
-              <Button size="sm" type="button" onClick={handleDaftar} disabled={saving || (type !== "official" && cabors.length === 0)}
+              <Button size="sm" onClick={handleDaftar} disabled={saving || (type !== "official" && cabors.length === 0)}
                 className="w-full bg-brand-500 hover:bg-brand-600 text-white disabled:opacity-40">
                 {saving ? "Menyimpan..." : "Daftarkan"}
               </Button>
@@ -372,7 +358,7 @@ export default function TrxModal({ isOpen, onClose, type, person, territoryId }:
         )}
 
         <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
-          <Button size="sm" variant="outline" type="button" onClick={onClose} disabled={saving}>
+          <Button size="sm" variant="outline" onClick={onClose} disabled={saving}>
             Tutup
           </Button>
         </div>

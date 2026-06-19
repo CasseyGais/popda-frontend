@@ -3,6 +3,14 @@ import api from "../../lib/api";
 const BASE_URL = "http://localhost:8000";
 const getToken = () => localStorage.getItem("token") ?? "";
 
+/**
+ * Helper: query string untuk territory_id
+ * Superadmin wajib kirim ?territory_id=X di semua endpoint
+ */
+function tq(territoryId?: number): string {
+  return territoryId ? `?territory_id=${territoryId}` : "";
+}
+
 /** Buat fetch request ke backend dengan auth header */
 const fetchJson = async (
   url: string,
@@ -72,6 +80,7 @@ export interface AtletPayload {
 }
 
 // --- Pelatih ---
+// Endpoint: /admin/master/pelatih  (bukan /admin/tahap3/pelatih)
 
 export interface MasterPelatih {
   id: number;
@@ -97,6 +106,7 @@ export interface MasterPelatih {
   prestasi_sebelumnya: string | null;
   catatan: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface PelatihPayload {
@@ -118,6 +128,7 @@ export interface PelatihPayload {
 }
 
 // --- Official ---
+// Endpoint: /admin/master/official  (bukan /admin/tahap3/official)
 
 export interface MasterOfficial {
   id: number;
@@ -139,6 +150,7 @@ export interface MasterOfficial {
   file_surat_tugas: string | null;
   catatan: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface OfficialPayload {
@@ -187,7 +199,8 @@ export interface TrxOfficial {
 export interface ListResponse<T> { success: boolean; message?: string; data: T[] }
 export interface SingleResponse<T> { success: boolean; message: string; data: T }
 
-// ─── Atlet endpoints ──────────────────────────────────────
+// ─── Atlet endpoints (/admin/tahap3/atlet) ────────────────
+// Atlet tetap pakai /admin/tahap3/atlet sesuai dokumentasi
 
 /**
  * GET /admin/tahap3/atlet
@@ -204,6 +217,7 @@ export const getAtletById = (id: number): Promise<SingleResponse<MasterAtlet>> =
 /**
  * POST /admin/tahap3/atlet
  * territoryId wajib untuk superadmin — backend resolve kontingen_id dari sini.
+ * Jangan kirim kontingen_id di payload.
  */
 export const createAtlet = (
   payload: AtletPayload,
@@ -213,16 +227,30 @@ export const createAtlet = (
   return api.post("/admin/tahap3/atlet", payload, { params }).then(r => r.data);
 };
 
-/** PUT /admin/tahap3/atlet/:id — tidak perlu territory_id */
+/**
+ * PUT /admin/tahap3/atlet/:id
+ * Backend validasi kepemilikan — superadmin wajib kirim territory_id.
+ */
 export const updateAtlet = (
   id: number,
-  payload: Partial<AtletPayload>
-): Promise<SingleResponse<MasterAtlet>> =>
-  api.put(`/admin/tahap3/atlet/${id}`, payload).then(r => r.data);
+  payload: Partial<AtletPayload>,
+  territoryId?: number
+): Promise<SingleResponse<MasterAtlet>> => {
+  const params = territoryId ? { territory_id: territoryId } : {};
+  return api.put(`/admin/tahap3/atlet/${id}`, payload, { params }).then(r => r.data);
+};
 
-/** DELETE /admin/tahap3/atlet/:id — hard delete, tidak perlu territory_id */
-export const deleteAtlet = (id: number): Promise<{ success: boolean; message: string }> =>
-  api.delete(`/admin/tahap3/atlet/${id}`).then(r => r.data);
+/**
+ * DELETE /admin/tahap3/atlet/:id
+ * Backend validasi kepemilikan — superadmin wajib kirim territory_id.
+ */
+export const deleteAtlet = (
+  id: number,
+  territoryId?: number
+): Promise<{ success: boolean; message: string }> => {
+  const params = territoryId ? { territory_id: territoryId } : {};
+  return api.delete(`/admin/tahap3/atlet/${id}`, { params }).then(r => r.data);
+};
 
 /** PUT /admin/tahap3/atlet/:id/foto */
 export const uploadFotoAtlet = async (
@@ -256,132 +284,278 @@ export const uploadFileAtlet = async (
   });
 };
 
-// ─── Pelatih endpoints ────────────────────────────────────
+// ─── Pelatih endpoints (/admin/master/pelatih) ───────────
+// Sesuai TAHAP3_DOCUMENTATION.md — pakai /admin/master/pelatih
 
+/**
+ * GET /admin/master/pelatih
+ * territoryId wajib untuk superadmin.
+ */
 export const getPelatihs = (territoryId?: number): Promise<ListResponse<MasterPelatih>> => {
   const params = territoryId ? { territory_id: territoryId } : {};
-  return api.get("/admin/tahap3/pelatih", { params }).then(r => r.data);
+  return api.get("/admin/master/pelatih", { params }).then(r => r.data);
 };
 
 export const getPelatihById = (id: number): Promise<SingleResponse<MasterPelatih>> =>
-  api.get(`/admin/tahap3/pelatih/${id}`).then(r => r.data);
+  api.get(`/admin/master/pelatih/${id}`).then(r => r.data);
 
+/**
+ * POST /admin/master/pelatih
+ * Jangan kirim kontingen_id di payload — diisi otomatis dari JWT/territory.
+ */
 export const createPelatih = (
   payload: PelatihPayload,
   territoryId?: number
 ): Promise<SingleResponse<MasterPelatih>> => {
   const params = territoryId ? { territory_id: territoryId } : {};
-  return api.post("/admin/tahap3/pelatih", payload, { params }).then(r => r.data);
+  return api.post("/admin/master/pelatih", payload, { params }).then(r => r.data);
 };
 
+/**
+ * PUT /admin/master/pelatih/:id
+ * Partial update. Backend validasi kepemilikan — superadmin wajib kirim territory_id.
+ */
 export const updatePelatih = (
   id: number,
-  payload: Partial<PelatihPayload>
-): Promise<SingleResponse<MasterPelatih>> =>
-  api.put(`/admin/tahap3/pelatih/${id}`, payload).then(r => r.data);
+  payload: Partial<PelatihPayload>,
+  territoryId?: number
+): Promise<SingleResponse<MasterPelatih>> => {
+  const params = territoryId ? { territory_id: territoryId } : {};
+  return api.put(`/admin/master/pelatih/${id}`, payload, { params }).then(r => r.data);
+};
 
-export const deletePelatih = (id: number): Promise<{ success: boolean; message: string }> =>
-  api.delete(`/admin/tahap3/pelatih/${id}`).then(r => r.data);
-
-/** PUT /admin/tahap3/pelatih/:id/file/:kolom — termasuk foto */
-export const uploadFilePelatih = async (
+/**
+ * DELETE /admin/master/pelatih/:id
+ * Cascade hapus semua trx_pendaftaran_pelatih terkait.
+ * Backend validasi kepemilikan — superadmin wajib kirim territory_id.
+ */
+export const deletePelatih = (
   id: number,
-  kolom: "foto" | "file_ktp" | "file_surat_tugas" | "file_sertifikat_pelatih",
+  territoryId?: number
+): Promise<{ success: boolean; message: string }> => {
+  const params = territoryId ? { territory_id: territoryId } : {};
+  return api.delete(`/admin/master/pelatih/${id}`, { params }).then(r => r.data);
+};
+
+/**
+ * PUT /admin/master/pelatih/:id/foto
+ * Upload foto via multipart/form-data, field name: foto
+ */
+export const uploadFotoPelatih = async (
+  id: number,
   file: File
 ): Promise<{ success: boolean; message: string; path: string }> => {
   const fd = new FormData();
-  fd.append("file", file);
-  return fetchJson(`${BASE_URL}/admin/tahap3/pelatih/${id}/file/${kolom}`, {
+  fd.append("foto", file);
+  return fetchJson(`${BASE_URL}/admin/master/pelatih/${id}/foto`, {
     method: "PUT",
     body: fd,
   });
 };
 
-// ─── Official endpoints ───────────────────────────────────
+/**
+ * PUT /admin/master/pelatih/:id/file/:kolom
+ * Upload dokumen via multipart/form-data, field name: file
+ * Kolom valid: file_ktp | file_surat_tugas | file_sertifikat_pelatih
+ */
+export const uploadFilePelatih = async (
+  id: number,
+  kolom: "file_ktp" | "file_surat_tugas" | "file_sertifikat_pelatih",
+  file: File
+): Promise<{ success: boolean; message: string; path: string }> => {
+  const fd = new FormData();
+  fd.append("file", file);
+  return fetchJson(`${BASE_URL}/admin/master/pelatih/${id}/file/${kolom}`, {
+    method: "PUT",
+    body: fd,
+  });
+};
 
+// ─── Pelatih Transaksi (/admin/master/pelatih/trx) ───────
+// Sesuai TAHAP3_DOCUMENTATION.md — pakai /admin/master/pelatih/trx
+
+/**
+ * GET /admin/master/pelatih/trx
+ * Ambil semua trx pendaftaran pelatih milik kontingen.
+ */
+export const getTrxPelatihs = (territoryId?: number): Promise<ListResponse<TrxPelatih>> => {
+  const params = territoryId ? { territory_id: territoryId } : {};
+  return api.get("/admin/master/pelatih/trx", { params }).then(r => r.data);
+};
+
+/**
+ * POST /admin/master/pelatih/trx
+ * Daftarkan pelatih ke cabor tertentu.
+ * Backend validasi pelatih_id milik kontingen yang request.
+ */
+export const daftarPelatih = (
+  pelatih_id: number,
+  cabor_id: number,
+  territoryId?: number
+): Promise<SingleResponse<TrxPelatih>> => {
+  const params = territoryId ? { territory_id: territoryId } : {};
+  return api.post("/admin/master/pelatih/trx", { pelatih_id, cabor_id }, { params }).then(r => r.data);
+};
+
+/** DELETE /admin/master/pelatih/trx/:id — batalkan pendaftaran pelatih dari cabor */
+export const batalDaftarPelatih = (
+  trxId: number,
+  territoryId?: number
+): Promise<{ success: boolean; message: string }> => {
+  const params = territoryId ? { territory_id: territoryId } : {};
+  return api.delete(`/admin/master/pelatih/trx/${trxId}`, { params }).then(r => r.data);
+};
+
+// ─── Official endpoints (/admin/master/official) ─────────
+// Sesuai TAHAP3_DOCUMENTATION.md — pakai /admin/master/official
+
+/**
+ * GET /admin/master/official
+ * territoryId wajib untuk superadmin.
+ */
 export const getOfficials = (territoryId?: number): Promise<ListResponse<MasterOfficial>> => {
   const params = territoryId ? { territory_id: territoryId } : {};
-  return api.get("/admin/tahap3/official", { params }).then(r => r.data);
+  return api.get("/admin/master/official", { params }).then(r => r.data);
 };
 
 export const getOfficialById = (id: number): Promise<SingleResponse<MasterOfficial>> =>
-  api.get(`/admin/tahap3/official/${id}`).then(r => r.data);
+  api.get(`/admin/master/official/${id}`).then(r => r.data);
 
+/**
+ * POST /admin/master/official
+ * Jangan kirim kontingen_id di payload — diisi otomatis dari JWT/territory.
+ */
 export const createOfficial = (
   payload: OfficialPayload,
   territoryId?: number
 ): Promise<SingleResponse<MasterOfficial>> => {
   const params = territoryId ? { territory_id: territoryId } : {};
-  return api.post("/admin/tahap3/official", payload, { params }).then(r => r.data);
+  return api.post("/admin/master/official", payload, { params }).then(r => r.data);
 };
 
+/**
+ * PUT /admin/master/official/:id
+ * Partial update. Backend validasi kepemilikan — superadmin wajib kirim territory_id.
+ */
 export const updateOfficial = (
   id: number,
-  payload: Partial<OfficialPayload>
-): Promise<SingleResponse<MasterOfficial>> =>
-  api.put(`/admin/tahap3/official/${id}`, payload).then(r => r.data);
+  payload: Partial<OfficialPayload>,
+  territoryId?: number
+): Promise<SingleResponse<MasterOfficial>> => {
+  const params = territoryId ? { territory_id: territoryId } : {};
+  return api.put(`/admin/master/official/${id}`, payload, { params }).then(r => r.data);
+};
 
-export const deleteOfficial = (id: number): Promise<{ success: boolean; message: string }> =>
-  api.delete(`/admin/tahap3/official/${id}`).then(r => r.data);
-
-/** PUT /admin/tahap3/official/:id/file/:kolom — termasuk foto */
-export const uploadFileOfficial = async (
+/**
+ * DELETE /admin/master/official/:id
+ * Cascade hapus semua trx_pendaftaran_official terkait.
+ * Backend validasi kepemilikan — superadmin wajib kirim territory_id.
+ */
+export const deleteOfficial = (
   id: number,
-  kolom: "foto" | "file_ktp" | "file_surat_tugas",
+  territoryId?: number
+): Promise<{ success: boolean; message: string }> => {
+  const params = territoryId ? { territory_id: territoryId } : {};
+  return api.delete(`/admin/master/official/${id}`, { params }).then(r => r.data);
+};
+
+/**
+ * PUT /admin/master/official/:id/foto
+ * Upload foto via multipart/form-data, field name: foto
+ */
+export const uploadFotoOfficial = async (
+  id: number,
   file: File
 ): Promise<{ success: boolean; message: string; path: string }> => {
   const fd = new FormData();
-  fd.append("file", file);
-  return fetchJson(`${BASE_URL}/admin/tahap3/official/${id}/file/${kolom}`, {
+  fd.append("foto", file);
+  return fetchJson(`${BASE_URL}/admin/master/official/${id}/foto`, {
     method: "PUT",
     body: fd,
   });
 };
 
-// ─── Transaksi Pendaftaran ────────────────────────────────
+/**
+ * PUT /admin/master/official/:id/file/:kolom
+ * Upload dokumen via multipart/form-data, field name: file
+ * Kolom valid: file_ktp | file_surat_tugas
+ */
+export const uploadFileOfficial = async (
+  id: number,
+  kolom: "file_ktp" | "file_surat_tugas",
+  file: File
+): Promise<{ success: boolean; message: string; path: string }> => {
+  const fd = new FormData();
+  fd.append("file", file);
+  return fetchJson(`${BASE_URL}/admin/master/official/${id}/file/${kolom}`, {
+    method: "PUT",
+    body: fd,
+  });
+};
+
+// ─── Official Transaksi (/admin/master/official/trx) ─────
+// Sesuai TAHAP3_DOCUMENTATION.md — pakai /admin/master/official/trx
+
+/**
+ * GET /admin/master/official/trx
+ * Ambil semua trx pendaftaran official milik kontingen.
+ */
+export const getTrxOfficials = (territoryId?: number): Promise<ListResponse<TrxOfficial>> => {
+  const params = territoryId ? { territory_id: territoryId } : {};
+  return api.get("/admin/master/official/trx", { params }).then(r => r.data);
+};
+
+/**
+ * POST /admin/master/official/trx
+ * Daftarkan official (tanpa cabor — berlaku untuk seluruh kontingen).
+ * Backend validasi official_id milik kontingen yang request.
+ */
+export const daftarOfficial = (
+  official_id: number,
+  territoryId?: number
+): Promise<SingleResponse<TrxOfficial>> => {
+  const params = territoryId ? { territory_id: territoryId } : {};
+  return api.post("/admin/master/official/trx", { official_id }, { params }).then(r => r.data);
+};
+
+/** DELETE /admin/master/official/trx/:id — batalkan pendaftaran official */
+export const batalDaftarOfficial = (
+  trxId: number,
+  territoryId?: number
+): Promise<{ success: boolean; message: string }> => {
+  const params = territoryId ? { territory_id: territoryId } : {};
+  return api.delete(`/admin/master/official/trx/${trxId}`, { params }).then(r => r.data);
+};
+
+// ─── Atlet Transaksi (/admin/tahap3/trx/atlet) ───────────
+// Atlet trx tetap pakai /admin/tahap3/trx/atlet
 
 /**
  * POST /admin/tahap3/trx/atlet
  * Daftarkan atlet ke cabor + nomor.
- * Tidak butuh territory_id (pakai atlet_id langsung).
+ * territoryId wajib untuk superadmin.
  */
 export const daftarAtlet = (
   atlet_id: number,
   cabor_id: number,
-  nomor_id: number
-): Promise<SingleResponse<TrxAtlet>> =>
-  api.post("/admin/tahap3/trx/atlet", { atlet_id, cabor_id, nomor_id }).then(r => r.data);
-
-/** DELETE /admin/tahap3/trx/atlet/:id — :id dari trx_pendaftaran_atlet */
-export const batalDaftarAtlet = (trxId: number): Promise<{ success: boolean; message: string }> =>
-  api.delete(`/admin/tahap3/trx/atlet/${trxId}`).then(r => r.data);
-
-/**
- * POST /admin/tahap3/trx/pelatih
- * Daftarkan pelatih ke cabor.
- */
-export const daftarPelatih = (
-  pelatih_id: number,
-  cabor_id: number
-): Promise<SingleResponse<TrxPelatih>> =>
-  api.post("/admin/tahap3/trx/pelatih", { pelatih_id, cabor_id }).then(r => r.data);
-
-/** DELETE /admin/tahap3/trx/pelatih/:id */
-export const batalDaftarPelatih = (trxId: number): Promise<{ success: boolean; message: string }> =>
-  api.delete(`/admin/tahap3/trx/pelatih/${trxId}`).then(r => r.data);
+  nomor_id: number,
+  territoryId?: number
+): Promise<SingleResponse<TrxAtlet>> => {
+  const params = territoryId ? { territory_id: territoryId } : {};
+  return api.post("/admin/tahap3/trx/atlet", { atlet_id, cabor_id, nomor_id }, { params }).then(r => r.data);
+};
 
 /**
- * POST /admin/tahap3/trx/official
- * Daftarkan official (tanpa cabor).
+ * DELETE /admin/tahap3/trx/atlet/:id
+ * territoryId wajib untuk superadmin.
  */
-export const daftarOfficial = (
-  official_id: number
-): Promise<SingleResponse<TrxOfficial>> =>
-  api.post("/admin/tahap3/trx/official", { official_id }).then(r => r.data);
-
-/** DELETE /admin/tahap3/trx/official/:id */
-export const batalDaftarOfficial = (trxId: number): Promise<{ success: boolean; message: string }> =>
-  api.delete(`/admin/tahap3/trx/official/${trxId}`).then(r => r.data);
+export const batalDaftarAtlet = (
+  trxId: number,
+  territoryId?: number
+): Promise<{ success: boolean; message: string }> => {
+  const params = territoryId ? { territory_id: territoryId } : {};
+  return api.delete(`/admin/tahap3/trx/atlet/${trxId}`, { params }).then(r => r.data);
+};
 
 // ─── Tahap 3 Status & Submit ──────────────────────────────
 
@@ -389,33 +563,37 @@ export type Tahap3Status = "DRAFT" | "SUBMITTED";
 
 /**
  * GET /admin/tahap3 — overview endpoint.
- * Dipakai untuk ambil tahap3_status dari tabel kontingen.
+ * Dipakai untuk ambil tahap3_status dan semua trx.
  * territoryId wajib untuk superadmin.
+ *
+ * Response structure: { success, data: { tahap3_status, tahap3_submitted_at, ... } }
  */
 export const getTahap3Status = async (territoryId?: number): Promise<{
   tahap3_status: Tahap3Status;
   tahap3_submitted_at: string | null;
+  tahap3_validasi_status: "PENDING" | "VALID" | "REVISI" | null;
+  tahap3_validasi_catatan: string | null;
 }> => {
   const params = territoryId ? { territory_id: territoryId } : {};
   const res = await api.get("/admin/tahap3", { params });
-  const kontingen = res.data?.data?.kontingen;
+  const d = res.data?.data;
   return {
-    tahap3_status:       kontingen?.tahap3_status      ?? "DRAFT",
-    tahap3_submitted_at: kontingen?.tahap3_submitted_at ?? null,
+    tahap3_status:            (d?.tahap3_status ?? "DRAFT") as Tahap3Status,
+    tahap3_submitted_at:      d?.tahap3_submitted_at       ?? null,
+    tahap3_validasi_status:   d?.tahap3_validasi_status    ?? null,
+    tahap3_validasi_catatan:  d?.tahap3_validasi_catatan   ?? null,
   };
 };
 
 /**
  * POST /admin/tahap3/submit
- * Kunci tahap 3 — bulk insert trx + update status ke SUBMITTED.
+ * Bulk insert trx pelatih + official + update status ke SUBMITTED.
  * territoryId wajib untuk superadmin.
  */
 export const submitTahap3 = async (
   territoryId?: number
 ): Promise<{ success: boolean; message: string }> => {
-  const url = territoryId
-    ? `${BASE_URL}/admin/tahap3/submit?territory_id=${territoryId}`
-    : `${BASE_URL}/admin/tahap3/submit`;
+  const url = `${BASE_URL}/admin/tahap3/submit${tq(territoryId)}`;
   const r = await fetch(url, {
     method: "POST",
     headers: { Authorization: `Bearer ${getToken()}` },
@@ -424,4 +602,3 @@ export const submitTahap3 = async (
   if (!r.ok || data.success === false) throw new Error(data.message || data.error || `Error ${r.status}`);
   return data;
 };
-

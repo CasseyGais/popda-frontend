@@ -157,7 +157,7 @@ export default function AtletModal({ isOpen, onClose, mode, data, territoryId, o
       if (mode === "create") {
         result = (await createAtlet(form, territoryId)).data;
       } else {
-        result = (await updateAtlet(data!.id, form)).data;
+        result = (await updateAtlet(data!.id, form, territoryId)).data;
       }
       if (fotoFile) {
         try { await uploadFotoAtlet(result.id, fotoFile); } catch { /* non-blocking */ }
@@ -361,11 +361,11 @@ export default function AtletModal({ isOpen, onClose, mode, data, territoryId, o
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
-          <Button size="sm" variant="outline" type="button" onClick={onClose} disabled={loading || anyUploading}>
+          <Button size="sm" variant="outline" onClick={onClose} disabled={loading || anyUploading}>
             {isView ? "Tutup" : "Batal"}
           </Button>
           {!isView && (
-            <Button size="sm" type="button" onClick={handleSave} disabled={loading || anyUploading}
+            <Button size="sm" onClick={handleSave} disabled={loading || anyUploading}
               className="bg-brand-500 hover:bg-brand-600 text-white">
               {loading ? "Menyimpan..." : mode === "create" ? "Simpan" : "Perbarui"}
             </Button>

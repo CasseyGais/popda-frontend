@@ -12,18 +12,11 @@ import {
   NomorItem,
   Tahap2Status,
 } from "../service";
+import { pengaturanTahapService, PengaturanTahap } from "../../PengaturanTahap/service";
 import ExportButtons from "../../../components/ui/ExportButtons";
 import { exportTahap2PDF, exportTahap2Excel } from "../../../utils/exportHelper";
 
 // ─── helpers ─────────────────────────────────────────────
-
-function checkSuperAdmin(user: ReturnType<typeof useAuth>["user"]): boolean {
-  if (!user) return false;
-  const roleName = (user.role?.name ?? "").toLowerCase();
-  if (["superadmin", "super_admin", "super admin"].includes(roleName)) return true;
-  if (user.territories && user.territories.length > 5) return true;
-  return false;
-}
 
 const KELAMIN_BADGE: Record<string, string> = {
   PUTRA:    "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
@@ -56,17 +49,20 @@ function StatusBadge({ status }: { status: Tahap2Status }) {
 
 export default function MainPage() {
   const navigate = useNavigate();
-  const { user, can, token }   = useAuth();
+  const { user, can }          = useAuth();
   const { currentTerritory }   = useTerritory();
-  const isSuperAdmin           = checkSuperAdmin(user);
+  // Gunakan can("*") — superadmin selalu punya wildcard permission
+  const isSuperAdmin           = can("*");
 
   const [nomorList, setNomorList]       = useState<NomorItem[]>([]);
   const [tahap2Status, setTahap2Status] = useState<Tahap2Status>("DRAFT");
+  const [validasiStatus, setValidasiStatus] = useState<"PENDING" | "VALID" | "REVISI" | null>(null);
+  const [validasiCatatan, setValidasiCatatan] = useState<string | null>(null);
   const [loading, setLoading]           = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [error, setError]               = useState("");
-  // nomorId yang sedang diproses (toggle) — untuk disable checkbox sementara
   const [toggling, setToggling]         = useState<Set<number>>(new Set());
+  const [pengaturan, setPengaturan]     = useState<PengaturanTahap | null>(null);
 
   /**
    * territory_id diteruskan ke service:
@@ -79,12 +75,17 @@ export default function MainPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await getTahap2(tid);
+      const [res, pengaturanList] = await Promise.all([
+        getTahap2(tid),
+        pengaturanTahapService.getAll(),
+      ]);
       setNomorList(res.data?.nomor_list || []);
       setTahap2Status(res.data?.tahap2_status ?? "DRAFT");
+      setValidasiStatus(res.data?.tahap2_validasi_status ?? null);
+      setValidasiCatatan(res.data?.tahap2_validasi_catatan ?? null);
+      setPengaturan(pengaturanTahapService.getByTahap(pengaturanList, 2));
     } catch (e: any) {
       const msg: string = e.message || "Gagal memuat data";
-      // Tahap 1 belum submit → tampilkan pesan khusus
       if (msg.toLowerCase().includes("tahap 1")) {
         setError("tahap1_belum_submit");
       } else {
@@ -103,6 +104,7 @@ export default function MainPage() {
   // ── toggle centang / uncentang satu nomor ──────────────
   const handleToggle = async (item: NomorItem) => {
     if (tahap2Status === "SUBMITTED") return;
+    if (tahapTutup) return;
     if (toggling.has(item.nomor_id)) return;
 
     // Check permission based on action
@@ -162,17 +164,18 @@ export default function MainPage() {
 
   const totalTerdaftar = nomorList.filter(n => n.terdaftar).length;
   const isSubmitted    = tahap2Status === "SUBMITTED";
-  const canSubmit      = !isSubmitted && totalTerdaftar > 0;
+  const tahapTutup     = !isSuperAdmin && pengaturan !== null && !pengaturan.is_open;
+  const canSubmit      = !isSubmitted && !tahapTutup && totalTerdaftar > 0;
 
   const kontigenName = isSuperAdmin
     ? (currentTerritory?.name ?? "kontingen")
     : (user?.name ?? "kontingen");
 
   const handleExportPDF = () =>
-    exportTahap2PDF(token!, kontigenName, territoryId);
+    exportTahap2PDF(kontigenName, territoryId);
 
   const handleExportExcel = () =>
-    exportTahap2Excel(token!, kontigenName, territoryId);
+    exportTahap2Excel(kontigenName, territoryId);
 
   // ── Superadmin belum pilih territory ───────────────────
   if (isSuperAdmin && !currentTerritory) {
@@ -222,15 +225,68 @@ export default function MainPage() {
           </div>
         </div>
 
+        {/* Banner tahap tutup */}
+        {!loading && tahapTutup && error !== "tahap1_belum_submit" && (
+          <div className="rounded-xl border border-yellow-200 bg-yellow-50 dark:border-yellow-800/40 dark:bg-yellow-900/20 px-5 py-4">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+              <div>
+                <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-400">Tahap 2 belum dibuka</p>
+                <p className="text-xs text-yellow-600 dark:text-yellow-500 mt-0.5">
+                  {pengaturan?.tanggal_buka
+                    ? `Pendaftaran akan dibuka pada ${new Date(pengaturan.tanggal_buka).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}.`
+                    : "Hubungi panitia untuk informasi jadwal pendaftaran."}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Banner submitted */}
         {!loading && isSubmitted && (
           <div className="rounded-xl border border-green-200 bg-green-50 dark:border-green-800/40 dark:bg-green-900/20 px-5 py-3 flex items-center gap-3">
             <svg className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p className="text-sm font-medium text-green-700 dark:text-green-400">
-              Tahap 2 sudah disubmit. 
-            </p>
+            <p className="text-sm font-medium text-green-700 dark:text-green-400">Tahap 2 sudah disubmit.</p>
+          </div>
+        )}
+
+        {/* Banner validasi dari panitia */}
+        {!loading && isSubmitted && validasiStatus === "REVISI" && (
+          <div className="rounded-xl border border-yellow-200 bg-yellow-50 dark:border-yellow-800/40 dark:bg-yellow-900/20 px-5 py-4">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+              <div>
+                <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-400">Data Tahap 2 perlu direvisi</p>
+                {validasiCatatan && (
+                  <p className="text-xs text-yellow-600 dark:text-yellow-500 mt-0.5">
+                    Catatan panitia: <em>"{validasiCatatan}"</em>
+                  </p>
+                )}
+                <p className="text-xs text-yellow-600 dark:text-yellow-500 mt-1">Silakan perbaiki data dan submit ulang.</p>
+              </div>
+            </div>
+          </div>
+        )}
+        {!loading && isSubmitted && validasiStatus === "PENDING" && (
+          <div className="rounded-xl border border-blue-200 bg-blue-50 dark:border-blue-800/40 dark:bg-blue-900/20 px-5 py-3 flex items-center gap-3">
+            <svg className="w-5 h-5 text-blue-500 dark:text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-sm text-blue-700 dark:text-blue-400">Tahap 2 sedang menunggu validasi dari panitia.</p>
+          </div>
+        )}
+        {!loading && isSubmitted && validasiStatus === "VALID" && (
+          <div className="rounded-xl border border-green-300 bg-green-50 dark:border-green-700/40 dark:bg-green-900/20 px-5 py-3 flex items-center gap-3">
+            <svg className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <p className="text-sm font-medium text-green-700 dark:text-green-400">Tahap 2 telah divalidasi oleh panitia. ✅</p>
           </div>
         )}
 

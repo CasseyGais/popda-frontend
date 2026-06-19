@@ -787,13 +787,130 @@ Kunci tahap 1 kontingen tersebut. Tidak perlu body.
 
 ---
 
+## 9. Pengaturan Tahap — Buka/Tutup
+
+Superadmin mengontrol kapan setiap tahap bisa diakses admin kontingen. Kontrol di `is_open` — tanggal hanya informatif.
+
+**Base path:** `/admin/pengaturan-tahap`
+
+### `GET /admin/pengaturan-tahap` 🔒 (Semua Role)
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "tahap": 1, "is_open": true, "tanggal_buka": "2026-06-01", "tanggal_tutup": "2026-06-30", "updated_at": "..." },
+    { "id": 2, "tahap": 2, "is_open": false, "tanggal_buka": null, "tanggal_tutup": null, "updated_at": "..." },
+    { "id": 3, "tahap": 3, "is_open": false, "tanggal_buka": null, "tanggal_tutup": null, "updated_at": "..." }
+  ]
+}
+```
+
+### `PUT /admin/pengaturan-tahap/:tahap` 🔒 (Superadmin Only)
+
+`:tahap` harus `1`, `2`, atau `3`. Semua field opsional.
+
+**Request Body:**
+```json
+{ "is_open": true, "tanggal_buka": "2026-06-01", "tanggal_tutup": "2026-06-30" }
+```
+
+Kirim string kosong `""` untuk hapus tanggal (set null):
+```json
+{ "tanggal_buka": "", "tanggal_tutup": "" }
+```
+
+**Response error — urutan tahap salah (400):**
+```json
+{ "success": false, "message": "Tahap 2 tidak bisa dibuka sebelum Tahap 1 pernah dibuka" }
+```
+
+> Lihat detail lengkap di `FEATURE_PENGATURAN_TAHAP_FRONTEND.md`
+
+---
+
+## 10. Validasi Pendaftaran
+
+Superadmin memvalidasi data kontingen per tahap setelah submit. Admin kontingen melihat hasilnya di widget dan halaman Rekap.
+
+### `GET /admin/validasi-pendaftaran` 🔒 (Superadmin Only)
+
+List semua kontingen + status validasi. Tidak perlu `territory_id`.
+
+**Query params opsional:** `?status=PENDING`, `?tahap=1`, `?territory_id=2`
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "kontingen_id": 2,
+      "territory_id": 1,
+      "nama_kontingen": "Kabupaten Tangerang",
+      "tahap1": { "submit_status": "SUBMITTED", "submitted_at": "...", "validasi_status": "PENDING", "validasi_catatan": null, "validasi_at": null },
+      "tahap2": { "submit_status": "SUBMITTED", "submitted_at": "...", "validasi_status": "REVISI", "validasi_catatan": "Nomor ganda campuran belum didaftarkan", "validasi_at": "..." },
+      "tahap3": { "submit_status": "DRAFT", "submitted_at": null, "validasi_status": null, "validasi_catatan": null, "validasi_at": null }
+    }
+  ]
+}
+```
+
+### `PUT /admin/validasi-pendaftaran/:kontingen_id/tahap/:tahap` 🔒 (Superadmin Only)
+
+Set VALID atau REVISI. Catatan wajib jika REVISI.
+
+**Request Body:**
+```json
+{ "status": "VALID", "catatan": null }
+```
+```json
+{ "status": "REVISI", "catatan": "Jumlah atlet putra melebihi kuota." }
+```
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "message": "Validasi Tahap 1 kontingen Kabupaten Tangerang berhasil disimpan",
+  "data": { "kontingen_id": 2, "nama_kontingen": "Kabupaten Tangerang", "tahap": 1, "status": "VALID", "catatan": null, "validasi_at": "..." }
+}
+```
+
+### `GET /admin/validasi-pendaftaran/status` 🔒 (Semua Role)
+
+Widget dashboard — hanya status validasi kontingen yang sedang login. Superadmin bisa pakai `?territory_id=X`.
+
+```json
+{
+  "success": true,
+  "data": {
+    "kontingen_id": 2,
+    "nama_kontingen": "Kabupaten Tangerang",
+    "tahap1": { "validasi_status": "VALID", "validasi_catatan": null },
+    "tahap2": { "validasi_status": "REVISI", "validasi_catatan": "Nomor ganda campuran belum didaftarkan" },
+    "tahap3": { "validasi_status": null }
+  }
+}
+```
+
+### `GET /admin/rekap-pendaftaran` 🔒 (Semua Role)
+
+Semua data pendaftaran kontingen dalam satu response. Admin biasa tidak perlu param, superadmin wajib `?territory_id=X`.
+
+> Lihat detail lengkap di `FEATURE_VALIDASI_PENDAFTARAN_FRONTEND.md`
+
+---
+
 ## Daftar Isi (Updated)
 
 1. [Modules](#1-modules)
 2. [Territories + User Territories](#2-territories--user-territories)
 3. [Users + User Roles + User Territories](#3-users)
-4. [Master Cabor](#4-master-cabor) — **Hard Delete**
-5. [Master Nomor](#5-master-nomor) — **Hard Delete**
+4. [Master Cabor](#4-master-cabor)
+5. [Master Nomor](#5-master-nomor)
 6. [Roles + Role Permissions](#6-roles--role-permissions)
 7. [Permissions](#7-permissions)
-8. [Tahap 1 — Akses Superadmin via Territory](#8-tahap-1--akses-superadmin-via-territory) — **Baru**
+8. [Tahap 1 — Akses Superadmin via Territory](#8-tahap-1--akses-superadmin-via-territory)
+9. [Pengaturan Tahap — Buka/Tutup](#9-pengaturan-tahap--bukatutup) — **Baru**
+10. [Validasi Pendaftaran](#10-validasi-pendaftaran) — **Baru**

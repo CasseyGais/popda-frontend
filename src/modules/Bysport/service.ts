@@ -42,8 +42,13 @@ export interface Tahap1Response {
   success: boolean;
   message: string;
   data: {
+    kontingen_id?: number;
+    territory_id?: number;
+    nama_kontingen?: string;
     tahap1_status: Tahap1Status;
     tahap1_submitted_at: string | null;
+    tahap1_validasi_status?: "PENDING" | "VALID" | "REVISI" | null;
+    tahap1_validasi_catatan?: string | null;
     cabor_list: TrxKontingenCabor[];
   };
 }

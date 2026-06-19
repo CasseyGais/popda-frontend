@@ -33,14 +33,14 @@ export default function CrudModal({
   const renderActions = () => {
     if (mode === "view") {
       return (
-        <Button size="sm" variant="outline" type="button" onClick={onClose}>Tutup</Button>
+        <Button size="sm" variant="outline" onClick={onClose}>Tutup</Button>
       );
     }
     if (mode === "delete") {
       return (
         <>
-          <Button size="sm" variant="outline" type="button" onClick={onClose} disabled={loading}>Batal</Button>
-          <Button size="sm" type="button" onClick={onDelete} disabled={loading}
+          <Button size="sm" variant="outline" onClick={onClose} disabled={loading}>Batal</Button>
+          <Button size="sm" onClick={onDelete} disabled={loading}
             className="bg-red-600 hover:bg-red-700 text-white">
             {loading ? <Spinner /> : "Hapus"}
           </Button>
@@ -49,8 +49,8 @@ export default function CrudModal({
     }
     return (
       <>
-        <Button size="sm" variant="outline" type="button" onClick={onClose} disabled={loading}>Batal</Button>
-        <Button size="sm" type="button" onClick={mode === "create" ? onSave : onUpdate}
+        <Button size="sm" variant="outline" onClick={onClose} disabled={loading}>Batal</Button>
+        <Button size="sm" onClick={mode === "create" ? onSave : onUpdate}
           disabled={loading} className="bg-brand-500 hover:bg-brand-600 text-white">
           {loading ? <Spinner /> : mode === "create" ? "Simpan" : "Perbarui"}
         </Button>

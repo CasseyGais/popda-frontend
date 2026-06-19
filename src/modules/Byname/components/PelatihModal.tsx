@@ -5,7 +5,7 @@ import Input from "../../../components/form/input/InputField";
 import Label from "../../../components/form/Label";
 import {
   MasterPelatih, PelatihPayload, JenisKelamin,
-  createPelatih, updatePelatih, uploadFilePelatih,
+  createPelatih, updatePelatih, uploadFotoPelatih, uploadFilePelatih,
 } from "../service";
 
 interface Props {
@@ -26,10 +26,11 @@ const STATUS_COLOR: Record<string, string> = {
   ditolak: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
 };
 
-type PelatihFileKolom = "foto" | "file_ktp" | "file_surat_tugas" | "file_sertifikat_pelatih";
+// Foto punya endpoint terpisah: PUT /admin/master/pelatih/:id/foto
+// Dokumen pakai: PUT /admin/master/pelatih/:id/file/:kolom
+type PelatihFileKolom = "file_ktp" | "file_surat_tugas" | "file_sertifikat_pelatih";
 
 const PELATIH_DOCS: { kolom: PelatihFileKolom; label: string; accept: string }[] = [
-  { kolom: "foto",                    label: "Foto",               accept: "image/*" },
   { kolom: "file_ktp",                label: "KTP",                accept: ".jpg,.jpeg,.png,.pdf" },
   { kolom: "file_surat_tugas",        label: "Surat Tugas",        accept: ".jpg,.jpeg,.png,.pdf" },
   { kolom: "file_sertifikat_pelatih", label: "Sertifikat Pelatih", accept: ".jpg,.jpeg,.png,.pdf" },
@@ -126,12 +127,23 @@ export default function PelatihModal({ isOpen, onClose, mode, data, territoryId,
     try {
       const result = mode === "create"
         ? (await createPelatih(form, territoryId)).data
-        : (await updatePelatih(data!.id, form)).data;
+        : (await updatePelatih(data!.id, form, territoryId)).data;
       onSuccess(result); onClose();
     } catch (e: any) { setError(e.message || "Gagal menyimpan pelatih"); }
     finally { setLoading(false); }
   };
 
+  /** Upload foto — endpoint terpisah: PUT /admin/master/pelatih/:id/foto */
+  const makeFotoUploader = () => async (file: File) => {
+    const id = (localData ?? data)!.id;
+    setAnyUploading(true);
+    try {
+      await uploadFotoPelatih(id, file);
+      setLocalData(prev => ({ ...(prev ?? data!), foto: URL.createObjectURL(file) }));
+    } finally { setAnyUploading(false); }
+  };
+
+  /** Upload dokumen — PUT /admin/master/pelatih/:id/file/:kolom */
   const makeUploader = (kolom: PelatihFileKolom) => async (file: File) => {
     const id = (localData ?? data)!.id;
     setAnyUploading(true);
@@ -225,6 +237,13 @@ export default function PelatihModal({ isOpen, onClose, mode, data, territoryId,
             )}
             {mode === "edit" && data?.id && (
               <div className="space-y-3">
+                {/* Foto — endpoint terpisah PUT /foto */}
+                <FileRow
+                  label="Foto" accept="image/*"
+                  currentPath={activeData?.foto}
+                  onUpload={makeFotoUploader()} uploading={anyUploading}
+                />
+                {/* Dokumen — PUT /file/:kolom */}
                 {PELATIH_DOCS.map(({ kolom, label, accept }) => (
                   <FileRow key={kolom} label={label} accept={accept}
                     currentPath={(activeData as any)?.[kolom]}
@@ -233,28 +252,46 @@ export default function PelatihModal({ isOpen, onClose, mode, data, territoryId,
               </div>
             )}
             {mode === "view" && (
-              <div className="grid grid-cols-2 gap-2">
-                {PELATIH_DOCS.map(({ kolom, label }) => {
-                  const path = (activeData as any)?.[kolom] as string | null;
-                  return (
-                    <div key={kolom} className="flex items-center gap-2 py-1">
-                      <span className={`w-2 h-2 rounded-full shrink-0 ${path ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"}`} />
-                      <span className="text-xs text-gray-500 dark:text-gray-400 flex-1">{label}</span>
-                      {path && <a href={path} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-500 hover:underline shrink-0">Lihat</a>}
-                    </div>
-                  );
-                })}
+              <div className="space-y-2">
+                {/* Foto */}
+                <div className="flex items-center gap-3">
+                  {activeData?.foto
+                    ? <img src={activeData.foto} alt="Foto" className="w-14 h-14 rounded-lg object-cover border border-gray-200 dark:border-gray-700"
+                        onError={e => { e.currentTarget.src = "/images/user/placeholder.jpg"; }} />
+                    : <div className="w-14 h-14 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                        <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                  }
+                  <div>
+                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300">Foto</p>
+                    <p className="text-xs text-gray-400">{activeData?.foto ? "Ada" : "Belum diupload"}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {PELATIH_DOCS.map(({ kolom, label }) => {
+                    const path = (activeData as any)?.[kolom] as string | null;
+                    return (
+                      <div key={kolom} className="flex items-center gap-2 py-1">
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${path ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"}`} />
+                        <span className="text-xs text-gray-500 dark:text-gray-400 flex-1">{label}</span>
+                        {path && <a href={path} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-500 hover:underline shrink-0">Lihat</a>}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </section>
         </div>
 
         <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
-          <Button size="sm" variant="outline" type="button" onClick={onClose} disabled={loading || anyUploading}>
+          <Button size="sm" variant="outline" onClick={onClose} disabled={loading || anyUploading}>
             {isView ? "Tutup" : "Batal"}
           </Button>
           {!isView && (
-            <Button size="sm" type="button" onClick={handleSave} disabled={loading || anyUploading}
+            <Button size="sm" onClick={handleSave} disabled={loading || anyUploading}
               className="bg-brand-500 hover:bg-brand-600 text-white">
               {loading ? "Menyimpan..." : mode === "create" ? "Simpan" : "Perbarui"}
             </Button>

@@ -38,6 +38,16 @@ const AppSidebar: React.FC = () => {
     ...(can("trx_kontingen_cabor.read")   ? [{ icon: <FormIcon />,  name: "Tahap I: Entry By Sport",   path: "/atlet-by-sports" }]  : []),
     ...(can("trx_kontingen_nomor.read")   ? [{ icon: <ListIcon />,  name: "Tahap II: Entry By Number", path: "/atlet-by-numbers" }] : []),
     ...(can("trx_pendaftaran_atlet.read") ? [{ icon: <TableIcon />, name: "Tahap III: Entry By Name",  path: "/atlet-by-names" }]   : []),
+    // Rekap Pendaftaran — tampil untuk semua user yang login
+    { icon: <FormIcon />, name: "Rekap Pendaftaran", path: "/rekap-pendaftaran" },
+    // Validasi Pendaftaran — hanya superadmin
+    ...(isSuperAdmin ? [{ icon: <ListIcon />, name: "Validasi Pendaftaran", path: "/admin/validasi-pendaftaran" }] : []),
+    // Sertifikat — superadmin dan staff_lapangan
+    ...(isSuperAdmin || can("sertifikat.read")
+      ? [{ icon: <TableIcon />, name: "Sertifikat", path: "/sertifikat" }]
+      : []),
+    // Laporan Pertandingan — semua role yang sudah login
+    { icon: <FormIcon />, name: "Laporan Pertandingan", path: "/laporan-pertandingan" },
   ];
 
   // Master Data & Settings — HANYA untuk SUPERADMIN
@@ -48,11 +58,12 @@ const AppSidebar: React.FC = () => {
   ] : [];
 
   const settingsSubItems = isSuperAdmin ? [
-    { name: "Users",       path: "/admin/users" },
-    { name: "Roles",       path: "/admin/roles" },
-    { name: "Territories", path: "/admin/territories" },
-    { name: "Modules",     path: "/admin/modules" },
-    { name: "Permissions", path: "/admin/permissions" },
+    { name: "Users",               path: "/admin/users" },
+    { name: "Roles",               path: "/admin/roles" },
+    { name: "Territories",         path: "/admin/territories" },
+    { name: "Modules",             path: "/admin/modules" },
+    { name: "Permissions",         path: "/admin/permissions" },
+    { name: "Pengaturan Tahap",    path: "/admin/pengaturan-tahap" },
   ] : [];
 
   // masterItems — hanya tampilkan grup jika ada sub-item (otomatis kosong untuk non-SUPERADMIN)

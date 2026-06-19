@@ -7,6 +7,8 @@ import PermissionsPage from "./pages/PermissionsPage";
 import ModulesPage from "./pages/ModulesPage";
 import CaborPage from "./pages/CaborPage";
 import NomorPage from "./pages/NomorPage";
+import PengaturanTahapPage from "./pages/PengaturanTahapPage";
+import ValidasiPendaftaranPage from "./pages/ValidasiPendaftaranPage";
 
 const wrap = (Page: React.ComponentType) => (
   <ProtectedRoute>
@@ -17,11 +19,13 @@ const wrap = (Page: React.ComponentType) => (
 );
 
 export const adminRoutes = [
-  { path: "/admin/users",       element: wrap(UsersPage) },
-  { path: "/admin/roles",       element: wrap(RolesPage) },
-  { path: "/admin/territories", element: wrap(TerritoriesPage) },
-  { path: "/admin/permissions", element: wrap(PermissionsPage) },
-  { path: "/admin/modules",     element: wrap(ModulesPage) },
-  { path: "/admin/cabor",       element: wrap(CaborPage) },
-  { path: "/admin/nomor",       element: wrap(NomorPage) },
+  { path: "/admin/users",                element: wrap(UsersPage) },
+  { path: "/admin/roles",                element: wrap(RolesPage) },
+  { path: "/admin/territories",          element: wrap(TerritoriesPage) },
+  { path: "/admin/permissions",          element: wrap(PermissionsPage) },
+  { path: "/admin/modules",              element: wrap(ModulesPage) },
+  { path: "/admin/cabor",                element: wrap(CaborPage) },
+  { path: "/admin/nomor",                element: wrap(NomorPage) },
+  { path: "/admin/pengaturan-tahap",     element: wrap(PengaturanTahapPage) },
+  { path: "/admin/validasi-pendaftaran", element: wrap(ValidasiPendaftaranPage) },
 ];

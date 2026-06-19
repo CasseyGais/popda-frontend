@@ -1,26 +1,99 @@
 # Tahap 1 — Pendaftaran Cabang Olahraga
 
 > **Base URL:** `http://localhost:8000`  
-> **Auth:** Semua endpoint wajib kirim header:
-> ```
-> Authorization: Bearer <token>
-> ```
-> `kontingen_id` diambil **otomatis dari JWT token** — tidak perlu dikirim di body.
+> **Auth:** Semua endpoint wajib header `Authorization: Bearer <token>`  
+> **Admin biasa:** `kontingen_id` otomatis dari JWT — tidak perlu kirim apapun  
+> **Superadmin:** Wajib kirim `?territory_id=X` di semua endpoint
 
 ---
 
 ## Daftar Isi
 
-1. [Struktur Tabel](#1-struktur-tabel)
-2. [Aturan Bisnis](#2-aturan-bisnis)
-3. [Endpoints](#3-endpoints)
-4. [Endpoint Pendukung](#4-endpoint-pendukung)
-5. [Alur Frontend](#5-alur-frontend)
-6. [Catatan Penting](#6-catatan-penting)
+1. [Konsep kontingen\_id & territory\_id](#1-konsep-kontingen_id--territory_id)
+2. [Struktur Tabel](#2-struktur-tabel)
+3. [Aturan Bisnis](#3-aturan-bisnis)
+4. [Endpoints](#4-endpoints)
+5. [Export PDF & Excel](#5-export-pdf--excel)
+6. [Endpoint Pendukung](#6-endpoint-pendukung)
+7. [Alur Frontend](#7-alur-frontend)
+8. [Superadmin — Akses via Territory](#8-superadmin--akses-via-territory)
+9. [Ringkasan Endpoint](#9-ringkasan-endpoint)
 
 ---
 
-## 1. Struktur Tabel
+## 1. Konsep kontingen\_id & territory\_id
+
+### Admin biasa
+
+JWT berisi `kontingen_id` yang sudah terikat saat login. Backend langsung pakai nilainya — frontend tidak perlu kirim apapun.
+
+### Superadmin
+
+Backend menggunakan **3 lapis pendeteksian** untuk menentukan apakah request dari superadmin:
+
+1. `claims.Role == "superadmin"` → cara utama, dari field role di JWT
+2. `claims.KontingenID == 0` → fallback untuk token lama yang rolenya mungkin tidak ter-set
+3. `?territory_id` ada di query → **selalu override JWT**, siapapun yang kirim akan dipakai
+
+**Prioritas resolusi:**
+```
+Ada ?territory_id di query?
+        │
+       YA → SELECT id FROM kontingen WHERE territory_id = X → pakai hasilnya
+        │
+       TIDAK
+        │
+       Apakah superadmin? (role == "superadmin" ATAU KontingenID == 0)
+        │
+       YA  → error 400: "wajib kirim territory_id"
+        │
+       TIDAK → admin biasa → pakai KontingenID dari JWT
+```
+
+> **Kunci:** Jika `?territory_id` ada di query, nilainya **selalu dipakai** — mengabaikan `kontingen_id` dari JWT sepenuhnya. Ini mencegah bug di mana superadmin yang akunnya terhubung ke territory tetap dapat data kontingen miliknya sendiri.
+
+### Contoh skenario
+
+```
+Superadmin punya KontingenID=2 di JWT (territory Kab. Tangerang)
+Superadmin pilih territory Kota Cilegon (id=9) di UI
+
+Request: GET /admin/tahap1?territory_id=9
+
+Backend:
+  1. territory_id=9 ada di query
+  2. SELECT id FROM kontingen WHERE territory_id = 9 → dapat kontingen_id=15
+  3. Return data milik Kota Cilegon (kontingen_id=15)
+  ← JWT kontingen_id=2 DIABAIKAN
+```
+
+### Setup di frontend
+
+```typescript
+const { can } = useAuth();
+const { currentTerritory } = useTerritory();
+
+// Satu baris — berlaku untuk semua call di halaman ini
+const territoryId = can("*") ? currentTerritory?.id : undefined;
+
+// Superadmin: guard jika territory belum dipilih
+if (can("*") && !currentTerritory) {
+  return <div>Pilih territory terlebih dahulu</div>;
+}
+```
+
+**Perbedaan admin vs superadmin:**
+
+| | Admin Biasa | Superadmin |
+|---|---|---|
+| `territoryId` | `undefined` | `currentTerritory?.id` |
+| Query param terkirim | Tidak ada | `?territory_id=X` |
+| Backend resolve dari | JWT `KontingenID` | Lookup tabel kontingen |
+| Bisa ganti kontingen? | ❌ Tidak | ✅ Ya, via territory selector |
+
+---
+
+## 2. Struktur Tabel
 
 ### `trx_kontingen_cabor`
 
@@ -44,38 +117,44 @@
 |---|---|
 | `tahap1_status` | `DRAFT` (default) atau `SUBMITTED` |
 | `tahap1_submitted_at` | `null` atau timestamp saat submit |
+| `tahap1_validasi_status` | `null` / `PENDING` / `VALID` / `REVISI` |
+| `tahap1_validasi_catatan` | `null` atau teks catatan dari superadmin |
+| `tahap1_validasi_at` | `null` atau timestamp saat superadmin terakhir review |
+
+> `tahap1_validasi_status` otomatis jadi `PENDING` saat submit. Superadmin yang set `VALID` atau `REVISI`.
 
 ### DB Trigger
 
-Tabel `trx_kontingen_cabor` memiliki trigger **`BEFORE INSERT`** yang memvalidasi kuota:
+Tabel `trx_kontingen_cabor` punya trigger **`BEFORE INSERT`** yang validasi kuota:
+- `putra > max_putra` → error
+- `putri > max_putri` → error
+- `pelatih > max_pelatih` → error
 
-```sql
--- Jika putra > max_putra  → error: "Jumlah atlet putra melebihi kuota"
--- Jika putri > max_putri  → error: "Jumlah atlet putri melebihi kuota"
--- Jika pelatih > max_pelatih → error: "Jumlah pelatih melebihi kuota"
-```
-
-> Trigger hanya aktif saat **INSERT**. Untuk operasi **UPDATE**, validasi dilakukan di service layer backend.
+> Trigger hanya aktif saat **INSERT**. Untuk **UPDATE**, validasi dilakukan di service layer backend.
 
 ---
 
-## 2. Aturan Bisnis
+## 3. Aturan Bisnis
 
 | No | Aturan |
 |---|---|
-| 1 | Setelah `tahap1_status = SUBMITTED`, semua operasi edit (PUT, DELETE) **ditolak** |
+| 1 | Setelah `tahap1_status = SUBMITTED`, semua PUT dan DELETE **ditolak** |
 | 2 | Jumlah `putra`, `putri`, `pelatih` tidak boleh melebihi kuota di `master_cabor` |
 | 3 | Submit hanya bisa dilakukan jika minimal ada **1 cabor** yang dipilih |
-| 4 | Satu kontingen + satu cabor hanya boleh punya **1 row** — PUT berlaku sebagai upsert (insert atau update) |
+| 4 | Satu kontingen + satu cabor hanya boleh punya **1 row** — PUT berlaku sebagai upsert |
 | 5 | `total_atlet` dan `total_personel` dihitung otomatis, tidak perlu dikirim dari frontend |
 
 ---
 
-## 3. Endpoints
+## 4. Endpoints
 
 ### `GET /admin/tahap1` 🔒
 
 Ambil status tahap 1 beserta daftar cabor yang sudah dipilih kontingen.
+
+**Query param:**
+- Admin biasa: tidak perlu
+- Superadmin: `?territory_id=2` (wajib)
 
 **Response 200:**
 ```json
@@ -83,8 +162,13 @@ Ambil status tahap 1 beserta daftar cabor yang sudah dipilih kontingen.
   "success": true,
   "message": "Data tahap 1 berhasil diambil",
   "data": {
-    "tahap1_status": "DRAFT",
-    "tahap1_submitted_at": null,
+    "kontingen_id": 3,
+    "territory_id": 2,
+    "nama_kontingen": "Kabupaten Tangerang",
+    "tahap1_status": "SUBMITTED",
+    "tahap1_submitted_at": "2026-06-10T14:00:00Z",
+    "tahap1_validasi_status": "REVISI",
+    "tahap1_validasi_catatan": "Jumlah atlet putra melebihi yang seharusnya. Harap perbaiki.",
     "cabor_list": [
       {
         "id": 1,
@@ -102,68 +186,46 @@ Ambil status tahap 1 beserta daftar cabor yang sudah dipilih kontingen.
 }
 ```
 
-> `cabor_list` berupa array kosong `[]` jika belum ada cabor yang dipilih.
-
-**Response error (500):**
-```json
-{ "success": false, "message": "kontingen tidak ditemukan" }
-```
+> `tahap1_validasi_status` bisa `null` (belum submit), `"PENDING"` (menunggu review), `"VALID"`, atau `"REVISI"`.  
+> Jika `"REVISI"`, tampilkan banner dengan isi `tahap1_validasi_catatan` ke admin kontingen.
 
 ---
 
 ### `PUT /admin/tahap1` 🔒
 
-Tambah atau update satu cabor di daftar tahap 1.
+Tambah atau update satu cabor. Jika `cabor_id` belum ada → INSERT, sudah ada → UPDATE.
 
-- Jika `cabor_id` **belum ada** untuk kontingen ini → **INSERT** baru
-- Jika `cabor_id` **sudah ada** → **UPDATE** kuotanya
-
-**Content-Type:** `multipart/form-data` *(bukan JSON)*
-
-**Form fields:**
+**Content-Type:** `multipart/form-data`
 
 | Field | Tipe | Wajib | Keterangan |
 |---|---|---|---|
-| `cabor_id` | number | ✅ | ID cabor dari tabel `master_cabor` |
+| `cabor_id` | number | ✅ | ID dari `master_cabor` |
 | `putra` | number | ❌ | Jumlah atlet putra (default 0) |
 | `putri` | number | ❌ | Jumlah atlet putri (default 0) |
 | `pelatih` | number | ❌ | Jumlah pelatih (default 0) |
 
-> **Jangan kirim** `total_atlet` dan `total_personel` — dihitung otomatis di backend.
+```javascript
+const form = new FormData();
+form.append("cabor_id", "6");
+form.append("putra", "3");
+form.append("putri", "2");
+form.append("pelatih", "1");
 
-**Contoh request (JavaScript):**
-```js
-const form = new FormData()
-form.append('cabor_id', '6')
-form.append('putra', '3')
-form.append('putri', '2')
-form.append('pelatih', '1')
-
-const res = await fetch('http://localhost:8000/admin/tahap1', {
-  method: 'PUT',
-  headers: { 'Authorization': `Bearer ${token}` },
-  // Jangan set Content-Type — biarkan browser set otomatis untuk FormData
-  body: form
-})
+await fetch(`${BASE}/admin/tahap1${territoryId ? `?territory_id=${territoryId}` : ""}`, {
+  method: "PUT",
+  headers: { Authorization: `Bearer ${token}` },
+  body: form,
+});
 ```
 
-**Response sukses (200):**
+**Response sukses 200:**
 ```json
 { "success": true, "message": "Data cabor berhasil disimpan" }
 ```
 
-**Response error kuota (400):**
+**Response error:**
 ```json
 { "success": false, "message": "jumlah atlet putra melebihi kuota (5)" }
-```
-
-**Response error cabor tidak ditemukan (400):**
-```json
-{ "success": false, "message": "cabor tidak ditemukan" }
-```
-
-**Response error sudah submit (400):**
-```json
 { "success": false, "message": "Tahap 1 sudah disubmit, tidak dapat diubah" }
 ```
 
@@ -173,74 +235,116 @@ const res = await fetch('http://localhost:8000/admin/tahap1', {
 
 Hapus satu cabor dari daftar tahap 1.
 
-**Contoh:** `DELETE /admin/tahap1/6`
-
-**Contoh request:**
-```js
-await fetch('http://localhost:8000/admin/tahap1/6', {
-  method: 'DELETE',
-  headers: { 'Authorization': `Bearer ${token}` }
-})
+```
+DELETE /admin/tahap1/6
+DELETE /admin/tahap1/6?territory_id=2   ← superadmin
 ```
 
-**Response sukses (200):**
+**Response sukses 200:**
 ```json
 { "success": true, "message": "Cabor berhasil dihapus dari daftar" }
-```
-
-**Response error sudah submit (400):**
-```json
-{ "success": false, "message": "Tahap 1 sudah disubmit, tidak dapat diubah" }
 ```
 
 ---
 
 ### `POST /admin/tahap1/submit` 🔒
 
-Kunci tahap 1. Mengubah `tahap1_status` menjadi `SUBMITTED` dan mengisi `tahap1_submitted_at` di tabel `kontingen`.
+Kunci tahap 1 — set `tahap1_status = SUBMITTED`. Tidak bisa diurungkan.
 
-Setelah submit, semua operasi PUT dan DELETE di tahap 1 akan ditolak.
-
-**Tidak perlu body.**
-
-**Contoh request:**
-```js
-await fetch('http://localhost:8000/admin/tahap1/submit', {
-  method: 'POST',
-  headers: { 'Authorization': `Bearer ${token}` }
-})
+```
+POST /admin/tahap1/submit
+POST /admin/tahap1/submit?territory_id=2   ← superadmin
 ```
 
-**Response sukses (200):**
+**Response sukses 200:**
 ```json
 { "success": true, "message": "Tahap 1 berhasil disubmit" }
 ```
 
-**Response error belum pilih cabor (400):**
+**Response error:**
 ```json
 { "success": false, "message": "pilih minimal satu cabang olahraga sebelum submit" }
-```
-
-**Response error sudah submit (400):**
-```json
 { "success": false, "message": "Tahap 1 sudah disubmit" }
 ```
 
 ---
 
-## 4. Endpoint Pendukung
+## 5. Export PDF & Excel
 
-Frontend perlu memanggil endpoint ini untuk menampilkan daftar cabor yang bisa dipilih.
+Download rekap data tahap 1 dalam format PDF atau Excel. Kedua format mendukung superadmin via `?territory_id=X`.
+
+### `GET /admin/tahap1/export/pdf` 🔒
+
+```
+GET /admin/tahap1/export/pdf
+GET /admin/tahap1/export/pdf?territory_id=2   ← superadmin
+```
+
+**Response:** File PDF binary
+```
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="tahap1_Kab_Tangerang_2026-06-03.pdf"
+Cache-Control: no-store
+```
+
+**Isi file PDF:**
+- Header: judul "REKAP ENTRY BY SPORT - POPDA 2026", nama kontingen, tanggal cetak, status (DRAFT/SUBMITTED)
+- Tabel data:
+
+| No | Cabang Olahraga | Atlet Putra | Atlet Putri | Pelatih | Total Atlet | Total Personel |
+|---|---|---|---|---|---|---|
+
+- Baris TOTAL di footer tabel
+
+---
+
+### `GET /admin/tahap1/export/excel` 🔒
+
+```
+GET /admin/tahap1/export/excel
+GET /admin/tahap1/export/excel?territory_id=2   ← superadmin
+```
+
+**Response:** File XLSX binary
+```
+Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+Content-Disposition: attachment; filename="tahap1_Kab_Tangerang_2026-06-03.xlsx"
+Cache-Control: no-store
+```
+
+**Isi file Excel:**
+- 1 sheet bernama "Tahap 1"
+- Header dokumen di baris 1-3: judul, nama kontingen, tanggal + status
+- Header tabel di baris 5: No, Cabang Olahraga, Atlet Putra, Atlet Putri, Pelatih, Total Atlet, Total Personel
+- Baris TOTAL di bawah data
+
+**Contoh implementasi frontend:**
+```typescript
+const handleExportPDF = async () => {
+  const url = territoryId
+    ? `${BASE}/admin/tahap1/export/pdf?territory_id=${territoryId}`
+    : `${BASE}/admin/tahap1/export/pdf`;
+  await downloadExport(url, token!, `tahap1_${slug}_${today}.pdf`);
+};
+```
+
+**Error jika tidak ada data (404):**
+```json
+{ "success": false, "message": "Tidak ada data untuk di-export" }
+```
+
+---
+
+## 6. Endpoint Pendukung
 
 ### `GET /admin/master/cabor` 🔒
 
-Ambil semua cabor yang aktif beserta batas kuota.
+Ambil semua cabor aktif beserta kuota — untuk populate dropdown di form tahap 1.
 
 **Response 200:**
 ```json
 {
   "success": true,
-  "message": "Data cabang olahraga berhasil diambil",
   "data": [
     {
       "id": 6,
@@ -248,95 +352,99 @@ Ambil semua cabor yang aktif beserta batas kuota.
       "max_putra": 5,
       "max_putri": 5,
       "max_pelatih": 2,
-      "is_active": true,
-      "created_at": "2026-02-11T08:25:14Z"
-    },
-    {
-      "id": 1,
-      "nama": "Atletik",
-      "max_putra": 26,
-      "max_putri": 26,
-      "max_pelatih": 4,
-      "is_active": true,
-      "created_at": "2026-02-11T08:25:14Z"
+      "is_active": true
     }
   ]
 }
 ```
 
-> Gunakan `max_putra`, `max_putri`, `max_pelatih` untuk set batas maksimum input di form.
+> Gunakan `max_putra`, `max_putri`, `max_pelatih` sebagai batas max di input form.
 
 ---
 
-## 5. Alur Frontend
+## 7. Alur Frontend
 
 ### Saat halaman dibuka
 
+```typescript
+const territoryId = can("*") ? currentTerritory?.id : undefined;
+
+// Fetch data
+const { data } = await tahap1Service.getData(territoryId);
+const { data: caborMaster } = await caborService.getAll();
+
+// Cek status validasi — tampilkan banner jika ada
+if (data.tahap1_validasi_status === "REVISI") {
+  // Tampilkan banner kuning dengan data.tahap1_validasi_catatan
+}
+if (data.tahap1_validasi_status === "PENDING") {
+  // Tampilkan banner biru "menunggu validasi panitia"
+}
+if (data.tahap1_validasi_status === "VALID") {
+  // Tampilkan badge hijau "data valid"
+}
+
+// Cek status submit
+if (data.tahap1_status === "SUBMITTED") {
+  // Render read-only, sembunyikan tombol edit/hapus/submit
+}
 ```
-GET /admin/tahap1        → ambil status + cabor yang sudah dipilih
-GET /admin/master/cabor  → ambil semua cabor aktif untuk ditampilkan
 
-Jika tahap1_status === "SUBMITTED":
-  → Render semua data sebagai read-only
-  → Sembunyikan tombol tambah, edit, hapus, dan submit
-
-Jika tahap1_status === "DRAFT":
-  → Render form yang bisa diedit
-```
-
-### Saat user tambah atau edit cabor
+### Saat user tambah/edit cabor
 
 ```
-User pilih cabor dari dropdown + isi jumlah putra/putri/pelatih
-  → PUT /admin/tahap1 (form-data)
-      ├── 200 OK   → refresh daftar cabor (GET /admin/tahap1 atau update state lokal)
-      └── 400 Error → tampilkan pesan dari response.message ke user
-```
-
-### Saat user hapus cabor
-
-```
-User klik tombol hapus pada baris cabor
-  → Dialog konfirmasi
-      └── Konfirmasi → DELETE /admin/tahap1/:cabor_id
-            ├── 200 OK   → hapus baris dari tampilan
-            └── 400 Error → tampilkan pesan error
+User pilih cabor + isi kuota → PUT /admin/tahap1
+  ├── 200 → refresh data
+  └── 400 → tampilkan pesan error
 ```
 
 ### Saat user submit
 
 ```
-User klik tombol "Submit Tahap 1"
-  → Dialog konfirmasi: "Data tidak dapat diubah setelah disubmit. Lanjutkan?"
-      └── Konfirmasi → POST /admin/tahap1/submit
-            ├── 200 OK   → ubah semua UI ke mode read-only, tampilkan badge "SUBMITTED"
-            └── 400 Error → tampilkan pesan error
+User klik "Submit Tahap 1"
+  → Konfirmasi dialog
+      → POST /admin/tahap1/submit
+            ├── 200 → ubah UI ke read-only, badge "SUBMITTED"
+            └── 400 → tampilkan error
 ```
 
 ---
 
-## 6. Catatan Penting
+## 8. Superadmin — Akses via Territory
 
-| Hal | Detail |
-|---|---|
-| **Content-Type** | PUT wajib `multipart/form-data`, bukan `application/json` |
-| **kontingen_id** | Tidak perlu dikirim — diambil otomatis dari JWT token |
-| **total_atlet** | Tidak perlu dikirim — `putra + putri`, dihitung di backend |
-| **total_personel** | Tidak perlu dikirim — `total_atlet + pelatih`, dihitung di backend |
-| **Validasi kuota INSERT** | Dilakukan oleh DB trigger `before_insert_trx_kontingen_cabor` |
-| **Validasi kuota UPDATE** | Dilakukan di service layer Go (trigger tidak aktif saat UPDATE) |
-| **Status lock** | Setelah `SUBMITTED`, semua PUT dan DELETE ditolak dengan error 400 |
-| **Upsert behavior** | PUT berfungsi sebagai insert jika cabor belum ada, update jika sudah ada |
-| **cabor_list kosong** | Normal — artinya kontingen belum pilih cabor apapun |
+Superadmin **selalu** pakai `territory_id` dari query param — JWT diabaikan untuk resolusi kontingen.
+
+| Method | URL Superadmin | URL Admin Biasa |
+|---|---|---|
+| GET | `/admin/tahap1?territory_id=2` | `/admin/tahap1` |
+| PUT | `/admin/tahap1?territory_id=2` | `/admin/tahap1` |
+| DELETE | `/admin/tahap1/6?territory_id=2` | `/admin/tahap1/6` |
+| POST | `/admin/tahap1/submit?territory_id=2` | `/admin/tahap1/submit` |
+| GET | `/admin/tahap1/export/pdf?territory_id=2` | `/admin/tahap1/export/pdf` |
+| GET | `/admin/tahap1/export/excel?territory_id=2` | `/admin/tahap1/export/excel` |
+
+**Error jika superadmin tidak kirim territory\_id (400):**
+```json
+{ "success": false, "message": "Superadmin wajib kirim query parameter territory_id" }
+```
+
+**Error jika territory tidak punya kontingen (404):**
+```json
+{ "success": false, "message": "Kontingen untuk territory ini tidak ditemukan" }
+```
 
 ---
 
-## Ringkasan Endpoint
+## 9. Ringkasan Endpoint
 
 | Method | URL | Keterangan |
 |---|---|---|
 | `GET` | `/admin/tahap1` | Ambil status + daftar cabor |
 | `PUT` | `/admin/tahap1` | Tambah atau update satu cabor (form-data) |
 | `DELETE` | `/admin/tahap1/:cabor_id` | Hapus satu cabor |
-| `POST` | `/admin/tahap1/submit` | Kunci tahap 1 (tidak bisa diurungkan) |
-| `GET` | `/admin/master/cabor` | Ambil semua cabor aktif (untuk dropdown) |
+| `POST` | `/admin/tahap1/submit` | Kunci tahap 1 |
+| `GET` | `/admin/tahap1/export/pdf` | Download PDF rekap cabor |
+| `GET` | `/admin/tahap1/export/excel` | Download Excel rekap cabor |
+| `GET` | `/admin/master/cabor` | Daftar cabor aktif (untuk dropdown) |
+
+> Semua endpoint support `?territory_id=X` untuk superadmin.

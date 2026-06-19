@@ -1,30 +1,83 @@
 # Tahap 2 — Pendaftaran Nomor Pertandingan
 
 > **Base URL:** `http://localhost:8000`  
-> **Auth:** Semua endpoint wajib kirim header:
-> ```
-> Authorization: Bearer <token>
-> ```
-> `kontingen_id` diambil **otomatis dari JWT token**.  
-> Superadmin wajib kirim `?territory_id=X` di semua endpoint.
+> **Auth:** Semua endpoint wajib header `Authorization: Bearer <token>`  
+> **Admin biasa:** `kontingen_id` otomatis dari JWT — tidak perlu kirim apapun  
+> **Superadmin:** Wajib kirim `?territory_id=X` di semua endpoint
 
 ---
 
 ## Daftar Isi
 
-1. [Keterkaitan dengan Tahap 1](#1-keterkaitan-dengan-tahap-1)
-2. [Struktur Tabel](#2-struktur-tabel)
-3. [Aturan Bisnis](#3-aturan-bisnis)
-4. [Endpoints](#4-endpoints)
-5. [Alur Frontend](#5-alur-frontend)
-6. [Superadmin — Akses via Territory](#6-superadmin--akses-via-territory)
-7. [Catatan Penting](#7-catatan-penting)
+1. [Konsep kontingen\_id & territory\_id](#1-konsep-kontingen_id--territory_id)
+2. [Keterkaitan dengan Tahap 1](#2-keterkaitan-dengan-tahap-1)
+3. [Struktur Tabel](#3-struktur-tabel)
+4. [Aturan Bisnis](#4-aturan-bisnis)
+5. [Endpoints](#5-endpoints)
+6. [Export PDF & Excel](#6-export-pdf--excel)
+7. [Alur Frontend](#7-alur-frontend)
+8. [Superadmin — Akses via Territory](#8-superadmin--akses-via-territory)
+9. [Ringkasan Endpoint](#9-ringkasan-endpoint)
 
 ---
 
-## 1. Keterkaitan dengan Tahap 1
+## 1. Konsep kontingen\_id & territory\_id
 
-Tahap 2 **bergantung pada Tahap 1**. Nomor yang tampil di tahap 2 difilter hanya dari cabor yang sudah dipilih kontingen di tahap 1.
+### Admin biasa
+
+JWT berisi `kontingen_id` yang sudah terikat saat login. Backend langsung pakai nilainya.
+
+### Superadmin
+
+Backend menggunakan **3 lapis pendeteksian** untuk menentukan apakah request dari superadmin:
+
+1. `claims.Role == "superadmin"` → cara utama
+2. `claims.KontingenID == 0` → fallback token lama
+3. `?territory_id` ada di query → **selalu override JWT**
+
+**Prioritas resolusi:**
+```
+Ada ?territory_id di query?
+        │
+       YA → SELECT id FROM kontingen WHERE territory_id = X → pakai hasilnya
+        │
+       TIDAK
+        │
+       Apakah superadmin? (role == "superadmin" ATAU KontingenID == 0)
+        │
+       YA  → error 400: "wajib kirim territory_id"
+        │
+       TIDAK → admin biasa → pakai KontingenID dari JWT
+```
+
+> **Penting:** Jika `?territory_id` ada di query, nilainya **selalu dipakai** mengabaikan JWT — ini fix untuk bug di mana superadmin mendapat data kontingen sendiri meski sudah pilih territory lain.
+
+### Setup di frontend
+
+```typescript
+const { can } = useAuth();
+const { currentTerritory } = useTerritory();
+
+const territoryId = can("*") ? currentTerritory?.id : undefined;
+
+// Guard untuk superadmin
+if (can("*") && !currentTerritory) {
+  return <div>Pilih territory terlebih dahulu</div>;
+}
+```
+
+| | Admin Biasa | Superadmin |
+|---|---|---|
+| `territoryId` | `undefined` | `currentTerritory?.id` |
+| Query param terkirim | Tidak ada | `?territory_id=X` |
+| Backend resolve dari | JWT `KontingenID` | Lookup tabel kontingen |
+| Bisa ganti kontingen? | ❌ | ✅ Via territory selector |
+
+---
+
+## 2. Keterkaitan dengan Tahap 1
+
+Tahap 2 **bergantung pada Tahap 1**. Nomor yang tampil hanya dari cabor yang dipilih di tahap 1.
 
 ```
 Tahap 1: Kontingen pilih Cabor (trx_kontingen_cabor)
@@ -33,13 +86,11 @@ Tahap 2: Backend ambil nomor dari cabor tersebut (master_nomor WHERE cabor_id IN
          Kontingen centang nomor yang ingin diikuti (trx_kontingen_nomor)
 ```
 
-**Syarat akses Tahap 2:**
-- `tahap1_status` di tabel `kontingen` harus `SUBMITTED`
-- Jika belum, GET akan return error: `"tahap 1 belum disubmit"`
+**Syarat akses:** `tahap1_status = SUBMITTED`. Jika belum → `400: "tahap 1 belum disubmit"`.
 
 ---
 
-## 2. Struktur Tabel
+## 3. Struktur Tabel
 
 ### `trx_kontingen_nomor`
 
@@ -50,51 +101,54 @@ Tahap 2: Backend ambil nomor dari cabor tersebut (master_nomor WHERE cabor_id IN
 | `nomor_id` | bigint | FK → `master_nomor.id` |
 | `created_at` | timestamp | Auto isi saat insert |
 
-> Tidak ada `updated_at` di tabel ini.
-
-### `master_nomor` (referensi, read-only dari tahap 2)
+### `master_nomor` (referensi, read-only)
 
 | Kolom | Tipe | Keterangan |
 |---|---|---|
 | `id` | bigint | Primary key |
 | `cabor_id` | int | FK → `master_cabor.id` |
-| `nama` | varchar(255) | Nama nomor, contoh: "Tunggal", "Ganda" |
+| `nama` | varchar | Nama nomor, contoh: "Tunggal", "Ganda" |
 | `jenis_kelamin` | enum | `PUTRA` / `PUTRI` / `CAMPURAN` |
 | `tipe` | enum | `INDIVIDU` / `BEREGU` |
-| `is_active` | tinyint | 1 = aktif, 0 = nonaktif |
-| `created_at` | timestamp | Auto isi |
+| `is_active` | tinyint | 1 = aktif |
 
-### Status Tahap 2 (di tabel `kontingen`)
+### Status (di tabel `kontingen`)
 
 | Kolom | Nilai |
 |---|---|
-| `tahap2_status` | `DRAFT` (default) atau `SUBMITTED` |
-| `tahap2_submitted_at` | `null` atau timestamp saat submit |
+| `tahap2_status` | `DRAFT` atau `SUBMITTED` |
+| `tahap2_submitted_at` | `null` atau timestamp |
+| `tahap2_validasi_status` | `null` / `PENDING` / `VALID` / `REVISI` |
+| `tahap2_validasi_catatan` | `null` atau teks catatan dari superadmin |
+| `tahap2_validasi_at` | `null` atau timestamp saat superadmin terakhir review |
+
+> `tahap2_validasi_status` otomatis jadi `PENDING` saat submit. Superadmin yang set `VALID` atau `REVISI`.
 
 ---
 
-## 3. Aturan Bisnis
+## 4. Aturan Bisnis
 
 | No | Aturan |
 |---|---|
 | 1 | **Tahap 1 wajib SUBMITTED** sebelum bisa akses tahap 2 |
-| 2 | Nomor yang ditampilkan **hanya dari cabor yang dipilih di tahap 1** |
+| 2 | Nomor yang tampil **hanya dari cabor yang dipilih di tahap 1** |
 | 3 | Tidak bisa daftar nomor dari cabor yang tidak ada di tahap 1 |
-| 4 | Setelah `tahap2_status = SUBMITTED`, semua operasi POST/DELETE ditolak |
-| 5 | Submit hanya bisa dilakukan jika minimal ada **1 nomor** yang didaftarkan |
-| 6 | Setiap nomor bersifat individual — daftar/batal per nomor, bukan bulk |
+| 4 | Setelah `tahap2_status = SUBMITTED`, semua POST/DELETE ditolak |
+| 5 | Submit hanya bisa jika minimal ada **1 nomor** yang didaftarkan |
+| 6 | Daftar/batal per nomor — tidak ada bulk action |
 
 ---
 
-## 4. Endpoints
+## 5. Endpoints
 
 ### `GET /admin/tahap2` 🔒
 
-Ambil status tahap 2 beserta daftar semua nomor yang tersedia (dari cabor tahap 1), lengkap dengan info apakah kontingen sudah mendaftar di nomor tersebut.
+Ambil status tahap 2 + semua nomor yang tersedia dari cabor tahap 1, beserta status terdaftar tiap nomor.
 
-**Query param opsional:**
-- Superadmin: `?territory_id=2` (wajib)
-- Admin biasa: tidak perlu
+```
+GET /admin/tahap2
+GET /admin/tahap2?territory_id=2   ← superadmin
+```
 
 **Response 200:**
 ```json
@@ -102,8 +156,13 @@ Ambil status tahap 2 beserta daftar semua nomor yang tersedia (dari cabor tahap 
   "success": true,
   "message": "Data tahap 2 berhasil diambil",
   "data": {
-    "tahap2_status": "DRAFT",
-    "tahap2_submitted_at": null,
+    "kontingen_id": 3,
+    "territory_id": 2,
+    "nama_kontingen": "Kabupaten Tangerang",
+    "tahap2_status": "SUBMITTED",
+    "tahap2_submitted_at": "2026-07-05T09:00:00Z",
+    "tahap2_validasi_status": "PENDING",
+    "tahap2_validasi_catatan": null,
     "nomor_list": [
       {
         "nomor_id": 69,
@@ -122,26 +181,18 @@ Ambil status tahap 2 beserta daftar semua nomor yang tersedia (dari cabor tahap 
         "jenis_kelamin": "PUTRA",
         "tipe": "BEREGU",
         "terdaftar": false
-      },
-      {
-        "nomor_id": 75,
-        "cabor_id": 6,
-        "nama_cabor": "Bulutangkis",
-        "nama_nomor": "Ganda Campuran",
-        "jenis_kelamin": "CAMPURAN",
-        "tipe": "BEREGU",
-        "terdaftar": false
       }
     ]
   }
 }
 ```
 
-> `nomor_list` diurutkan: nama cabor → jenis kelamin → nama nomor.  
 > `terdaftar: true` = sudah ada di `trx_kontingen_nomor`.  
-> `terdaftar: false` = tersedia tapi belum didaftarkan.
+> `terdaftar: false` = tersedia tapi belum dicentang.  
+> `tahap2_validasi_status` bisa `null`, `"PENDING"`, `"VALID"`, atau `"REVISI"`.  
+> Jika `"REVISI"`, tampilkan banner dengan isi `tahap2_validasi_catatan`.
 
-**Response error tahap 1 belum submit (400):**
+**Response error:**
 ```json
 { "success": false, "message": "tahap 1 belum disubmit" }
 ```
@@ -150,18 +201,11 @@ Ambil status tahap 2 beserta daftar semua nomor yang tersedia (dari cabor tahap 
 
 ### `POST /admin/tahap2/nomor/:nomor_id` 🔒
 
-Daftarkan satu nomor ke kontingen. Memasukkan satu row ke `trx_kontingen_nomor`.
+Daftarkan satu nomor. Tidak perlu body.
 
-Tidak perlu body — semua info diambil dari URL param dan JWT.
-
-**Contoh:** `POST /admin/tahap2/nomor/69`
-
-**Contoh request:**
-```js
-await fetch('http://localhost:8000/admin/tahap2/nomor/69', {
-  method: 'POST',
-  headers: { 'Authorization': `Bearer ${token}` }
-})
+```
+POST /admin/tahap2/nomor/69
+POST /admin/tahap2/nomor/69?territory_id=2   ← superadmin
 ```
 
 **Response 200:**
@@ -169,13 +213,9 @@ await fetch('http://localhost:8000/admin/tahap2/nomor/69', {
 { "success": true, "message": "Nomor berhasil didaftarkan" }
 ```
 
-**Response error nomor bukan dari cabor tahap 1 (400):**
+**Response error:**
 ```json
 { "success": false, "message": "nomor tidak termasuk dalam cabor yang didaftarkan di tahap 1" }
-```
-
-**Response error sudah submit (400):**
-```json
 { "success": false, "message": "tahap 2 sudah disubmit, tidak dapat diubah" }
 ```
 
@@ -183,16 +223,11 @@ await fetch('http://localhost:8000/admin/tahap2/nomor/69', {
 
 ### `DELETE /admin/tahap2/nomor/:nomor_id` 🔒
 
-Batalkan pendaftaran satu nomor dari kontingen. Menghapus row dari `trx_kontingen_nomor`.
+Batalkan pendaftaran satu nomor.
 
-**Contoh:** `DELETE /admin/tahap2/nomor/69`
-
-**Contoh request:**
-```js
-await fetch('http://localhost:8000/admin/tahap2/nomor/69', {
-  method: 'DELETE',
-  headers: { 'Authorization': `Bearer ${token}` }
-})
+```
+DELETE /admin/tahap2/nomor/69
+DELETE /admin/tahap2/nomor/69?territory_id=2   ← superadmin
 ```
 
 **Response 200:**
@@ -200,104 +235,167 @@ await fetch('http://localhost:8000/admin/tahap2/nomor/69', {
 { "success": true, "message": "Pendaftaran nomor berhasil dibatalkan" }
 ```
 
-**Response error sudah submit (400):**
-```json
-{ "success": false, "message": "tahap 2 sudah disubmit, tidak dapat diubah" }
-```
-
 ---
 
 ### `POST /admin/tahap2/submit` 🔒
 
-Kunci tahap 2. Mengubah `tahap2_status` menjadi `SUBMITTED` dan mengisi `tahap2_submitted_at` di tabel `kontingen`.
+Kunci tahap 2. Tidak bisa diurungkan.
 
-Setelah submit, semua POST dan DELETE nomor akan ditolak.
-
-Tidak perlu body.
+```
+POST /admin/tahap2/submit
+POST /admin/tahap2/submit?territory_id=2   ← superadmin
+```
 
 **Response 200:**
 ```json
 { "success": true, "message": "Tahap 2 berhasil disubmit" }
 ```
 
-**Response error belum pilih nomor (400):**
+**Response error:**
 ```json
 { "success": false, "message": "pilih minimal satu nomor pertandingan sebelum submit" }
-```
-
-**Response error sudah submit (400):**
-```json
 { "success": false, "message": "tahap 2 sudah disubmit" }
 ```
 
 ---
 
-## 5. Alur Frontend
+## 6. Export PDF & Excel
 
-### Saat halaman dibuka
+Download rekap nomor pertandingan yang sudah didaftarkan kontingen. Syarat: tahap 1 harus sudah SUBMITTED.
 
-```
-GET /admin/tahap2
-
-Jika error "tahap 1 belum disubmit":
-  → Tampilkan pesan, redirect ke Tahap 1
-
-Jika sukses:
-  Cek tahap2_status:
-  ├── "SUBMITTED" → render semua data read-only, sembunyikan tombol edit
-  └── "DRAFT"    → render checklist nomor yang bisa dicentang/uncentang
-```
-
-### Render daftar nomor
-
-`nomor_list` berisi semua nomor yang tersedia dari cabor tahap 1.
-Kelompokkan berdasarkan `nama_cabor` untuk tampilan yang rapi:
+### `GET /admin/tahap2/export/pdf` 🔒
 
 ```
-Bulutangkis
-  ├── ☑ Tunggal (PUTRA, INDIVIDU)        → terdaftar: true
-  ├── ☐ Ganda (PUTRA, BEREGU)            → terdaftar: false
-  ├── ☐ Tunggal (PUTRI, INDIVIDU)        → terdaftar: false
-  └── ☐ Ganda Campuran (CAMPURAN, BEREGU)→ terdaftar: false
-
-Atletik
-  ├── ☑ 100 M (PUTRA, INDIVIDU)          → terdaftar: true
-  └── ☐ 200 M (PUTRA, INDIVIDU)          → terdaftar: false
+GET /admin/tahap2/export/pdf
+GET /admin/tahap2/export/pdf?territory_id=2   ← superadmin
 ```
 
-### Saat user centang nomor
-
+**Response:** File PDF binary
 ```
-User klik checkbox nomor yang belum terdaftar (terdaftar: false)
-  → POST /admin/tahap2/nomor/:nomor_id
-      ├── 200 OK   → update state: terdaftar = true
-      └── 400 Error → tampilkan pesan error
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="tahap2_Kab_Tangerang_2026-06-03.pdf"
+Cache-Control: no-store
 ```
 
-### Saat user uncentang nomor
+**Isi file PDF:**
+- Header: judul "REKAP ENTRY BY NUMBER - POPDA 2026", nama kontingen, tanggal cetak, status
+- Tabel data (diurutkan per cabor):
+
+| No | Cabang Olahraga | Nomor Pertandingan | Jenis Kelamin | Tipe |
+|---|---|---|---|---|
+
+- Jenis kelamin ditampilkan sebagai `PUTRA` / `PUTRI` / `CAMPURAN`
+- Ringkasan "Total Nomor Terdaftar: N" di bawah tabel
+
+---
+
+### `GET /admin/tahap2/export/excel` 🔒
 
 ```
-User klik checkbox nomor yang sudah terdaftar (terdaftar: true)
-  → DELETE /admin/tahap2/nomor/:nomor_id
-      ├── 200 OK   → update state: terdaftar = false
-      └── 400 Error → tampilkan pesan error
+GET /admin/tahap2/export/excel
+GET /admin/tahap2/export/excel?territory_id=2   ← superadmin
 ```
 
-### Saat user submit
-
+**Response:** File XLSX binary
 ```
-User klik tombol "Submit Tahap 2"
-  → Dialog konfirmasi: "Data tidak dapat diubah setelah disubmit. Lanjutkan?"
-      └── Konfirmasi → POST /admin/tahap2/submit
-            ├── 200 OK   → ubah UI ke mode read-only, tampilkan badge "SUBMITTED"
-            └── 400 Error → tampilkan pesan error
+Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+Content-Disposition: attachment; filename="tahap2_Kab_Tangerang_2026-06-03.xlsx"
+Cache-Control: no-store
+```
+
+**Isi file Excel:**
+- 1 sheet bernama "Tahap 2"
+- Header dokumen di baris 1-3: judul, nama kontingen, tanggal + status
+- Header tabel di baris 5: No, Cabang Olahraga, Nomor Pertandingan, Jenis Kelamin, Tipe
+- Ringkasan total nomor di bawah data
+
+**Contoh implementasi frontend:**
+```typescript
+const handleExportPDF = async () => {
+  const url = territoryId
+    ? `${BASE}/admin/tahap2/export/pdf?territory_id=${territoryId}`
+    : `${BASE}/admin/tahap2/export/pdf`;
+  await downloadExport(url, token!, `tahap2_${slug}_${today}.pdf`);
+};
+```
+
+**Error jika tidak ada data (404):**
+```json
+{ "success": false, "message": "Tidak ada data untuk di-export" }
+```
+
+**Error jika tahap 1 belum SUBMITTED (400):**
+```json
+{ "success": false, "message": "tahap 1 belum disubmit" }
 ```
 
 ---
 
-## 6. Superadmin — Akses via Territory
+## 7. Alur Frontend
 
-Superadmin tidak punya `kontingen_id` di JWT. Semua endpoint wajib kirim `?territory_id=X`.
+### Saat halaman dibuka
+
+```typescript
+const territoryId = can("*") ? currentTerritory?.id : undefined;
+
+const res = await tahap2Service.getData(territoryId);
+
+if (res berisi error "tahap 1 belum disubmit") {
+  // Tampilkan pesan, arahkan ke Tahap 1
+}
+
+// Cek status validasi — tampilkan banner jika ada
+if (data.tahap2_validasi_status === "REVISI") {
+  // Tampilkan banner kuning dengan data.tahap2_validasi_catatan
+}
+if (data.tahap2_validasi_status === "PENDING") {
+  // Tampilkan banner biru "menunggu validasi panitia"
+}
+
+if (data.tahap2_status === "SUBMITTED") {
+  // Render read-only
+} else {
+  // Render checklist nomor
+}
+```
+
+### Render daftar nomor
+
+Kelompokkan `nomor_list` berdasarkan `nama_cabor`:
+
+```
+Bulutangkis
+  ├── ☑ Tunggal Putra  (INDIVIDU)     terdaftar: true
+  ├── ☐ Ganda Putra    (BEREGU)       terdaftar: false
+  └── ☐ Ganda Campuran (BEREGU)       terdaftar: false
+
+Atletik
+  ├── ☑ 100 M Putra    (INDIVIDU)     terdaftar: true
+  └── ☐ 200 M Putra    (INDIVIDU)     terdaftar: false
+```
+
+### Saat centang/uncentang nomor
+
+```
+terdaftar: false → centang → POST /admin/tahap2/nomor/:nomor_id
+terdaftar: true  → uncentang → DELETE /admin/tahap2/nomor/:nomor_id
+  ├── 200 → update state lokal (toggle terdaftar)
+  └── 400 → tampilkan error
+```
+
+### Saat submit
+
+```
+POST /admin/tahap2/submit
+  ├── 200 → UI ke read-only, badge "SUBMITTED"
+  └── 400 → tampilkan error
+```
+
+---
+
+## 8. Superadmin — Akses via Territory
+
+Superadmin **selalu** pakai `territory_id` dari query param — bukan dari JWT.
 
 | Method | URL Superadmin | URL Admin Biasa |
 |---|---|---|
@@ -305,8 +403,10 @@ Superadmin tidak punya `kontingen_id` di JWT. Semua endpoint wajib kirim `?terri
 | POST | `/admin/tahap2/nomor/69?territory_id=2` | `/admin/tahap2/nomor/69` |
 | DELETE | `/admin/tahap2/nomor/69?territory_id=2` | `/admin/tahap2/nomor/69` |
 | POST | `/admin/tahap2/submit?territory_id=2` | `/admin/tahap2/submit` |
+| GET | `/admin/tahap2/export/pdf?territory_id=2` | `/admin/tahap2/export/pdf` |
+| GET | `/admin/tahap2/export/excel?territory_id=2` | `/admin/tahap2/export/excel` |
 
-**Error jika territory_id tidak dikirim (400):**
+**Error jika superadmin tidak kirim territory\_id (400):**
 ```json
 { "success": false, "message": "Superadmin wajib kirim query parameter territory_id" }
 ```
@@ -318,25 +418,15 @@ Superadmin tidak punya `kontingen_id` di JWT. Semua endpoint wajib kirim `?terri
 
 ---
 
-## 7. Catatan Penting
-
-| Hal | Detail |
-|---|---|
-| **Syarat akses** | Tahap 1 wajib SUBMITTED |
-| **Nomor yang tampil** | Hanya dari cabor yang dipilih di tahap 1 |
-| **Validasi saat daftar** | Backend cek `nomor.cabor_id` ada di `trx_kontingen_cabor` kontingen |
-| **Tidak ada body** | POST dan DELETE tidak perlu request body |
-| **Status lock** | Setelah SUBMITTED, semua POST/DELETE ditolak |
-| **Tidak ada bulk** | Daftar/batal per satu nomor — tidak ada endpoint daftar-semua |
-| **territory_id** | Superadmin wajib, admin biasa tidak perlu |
-
----
-
-## Ringkasan Endpoint
+## 9. Ringkasan Endpoint
 
 | Method | URL | Keterangan |
 |---|---|---|
-| `GET` | `/admin/tahap2` | Ambil status + daftar nomor dengan status terdaftar |
+| `GET` | `/admin/tahap2` | Ambil status + daftar nomor |
 | `POST` | `/admin/tahap2/nomor/:nomor_id` | Daftarkan satu nomor |
 | `DELETE` | `/admin/tahap2/nomor/:nomor_id` | Batalkan satu nomor |
-| `POST` | `/admin/tahap2/submit` | Kunci tahap 2 (tidak bisa diurungkan) |
+| `POST` | `/admin/tahap2/submit` | Kunci tahap 2 |
+| `GET` | `/admin/tahap2/export/pdf` | Download PDF rekap nomor |
+| `GET` | `/admin/tahap2/export/excel` | Download Excel rekap nomor |
+
+> Semua endpoint support `?territory_id=X` untuk superadmin.
