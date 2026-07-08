@@ -67,7 +67,7 @@ export default function CaborEntryModal({ isOpen, onClose, mode, entry, onSave }
   const title = mode === "add" ? "Tambah Cabor" : mode === "edit" ? "Edit Kuota" : "Detail Cabor";
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} className="sm:max-w-sm p-6">
+    <BaseModal isOpen={isOpen} onClose={onClose} className="w-full sm:max-w-sm m-4 p-6">
       <div className="mb-5">
         <h2 className="text-base font-semibold text-gray-900 dark:text-white">{title}</h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{form.nama}</p>
@@ -91,7 +91,7 @@ export default function CaborEntryModal({ isOpen, onClose, mode, entry, onSave }
           <Input
             type="number"
             min="0"
-            max={form.max_putra > 0 ? form.max_putra : undefined}
+            max={form.max_putra > 0 ? String(form.max_putra) : undefined}
             value={form.putra.toString()}
             onChange={e => setNum("putra", e.target.value)}
             disabled={isView || loading}
@@ -109,7 +109,7 @@ export default function CaborEntryModal({ isOpen, onClose, mode, entry, onSave }
           <Input
             type="number"
             min="0"
-            max={form.max_putri > 0 ? form.max_putri : undefined}
+            max={form.max_putri > 0 ? String(form.max_putri) : undefined}
             value={form.putri.toString()}
             onChange={e => setNum("putri", e.target.value)}
             disabled={isView || loading}
@@ -127,7 +127,7 @@ export default function CaborEntryModal({ isOpen, onClose, mode, entry, onSave }
           <Input
             type="number"
             min="0"
-            max={form.max_pelatih > 0 ? form.max_pelatih : undefined}
+            max={form.max_pelatih > 0 ? String(form.max_pelatih) : undefined}
             value={form.pelatih.toString()}
             onChange={e => setNum("pelatih", e.target.value)}
             disabled={isView || loading}
@@ -146,9 +146,6 @@ export default function CaborEntryModal({ isOpen, onClose, mode, entry, onSave }
       </div>
 
       <div className="flex gap-3 justify-end mt-6">
-        <Button variant="outline" onClick={onClose} disabled={loading}>
-          {isView ? "Tutup" : "Batal"}
-        </Button>
         {!isView && (
           <Button variant="primary" onClick={handleSave} disabled={loading}>
             {loading ? "Menyimpan..." : "Simpan"}

@@ -122,6 +122,18 @@ export const deleteTahap1Cabor = async (
 };
 
 /**
+ * POST /admin/tahap1/reset
+ * Reset status tahap1 ke DRAFT — SUPERADMIN only.
+ * territoryId wajib karena hanya superadmin yang bisa akses endpoint ini.
+ */
+export const resetTahap1 = (
+  territoryId: number
+): Promise<{ success: boolean; message: string }> =>
+  api
+    .post("/admin/tahap1/reset", null, { params: { territory_id: territoryId } })
+    .then(r => r.data);
+
+/**
  * POST /admin/tahap1/submit
  * - territoryId wajib untuk superadmin, undefined untuk admin biasa
  */

@@ -124,7 +124,7 @@ function TahapRow({ setting, onToggle, onSaveDates, saving }: RowProps) {
               type="date"
               value={buka}
               onChange={e => setBuka(e.target.value)}
-              className="w-full h-9 rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent px-3 text-sm text-gray-800 dark:text-white"
+              className="w-full h-9 rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent px-3 text-sm text-gray-800 dark:text-white [&::-webkit-calendar-picker-indicator]:cursor-pointer dark:[&::-webkit-calendar-picker-indicator]:invert dark:[&::-webkit-calendar-picker-indicator]:filter"
             />
           </div>
           <div>
@@ -135,7 +135,7 @@ function TahapRow({ setting, onToggle, onSaveDates, saving }: RowProps) {
               type="date"
               value={tutup}
               onChange={e => setTutup(e.target.value)}
-              className="w-full h-9 rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent px-3 text-sm text-gray-800 dark:text-white"
+              className="w-full h-9 rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent px-3 text-sm text-gray-800 dark:text-white [&::-webkit-calendar-picker-indicator]:cursor-pointer dark:[&::-webkit-calendar-picker-indicator]:invert dark:[&::-webkit-calendar-picker-indicator]:filter"
             />
           </div>
           <div className="sm:col-span-2 flex gap-2 justify-end">

@@ -5,9 +5,12 @@ import { useSidebar } from "../../../context/SidebarContext";
 import { ThemeToggleButton } from "../../../components/common/ThemeToggleButton";
 import UserDropdown from "../../../components/header/UserDropdown";
 import TerritorySelector from "./TerritorySelector";
+import { useAuth } from "../../../context/AuthContext";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
+  const { user } = useAuth();
+  const isStaffLapangan = user?.role?.name === "STAFF_LAPANGAN";
 
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
 
@@ -84,10 +87,12 @@ const AppHeader: React.FC = () => {
               )}
             </button>
 
-            {/* Territory Selector - Desktop Only */}
-            <div className="hidden lg:flex items-center gap-3">
-              <TerritorySelector />
-            </div>
+            {/* Territory Selector - Desktop Only — disembunyikan untuk STAFF_LAPANGAN */}
+            {!isStaffLapangan && (
+              <div className="hidden lg:flex items-center gap-3">
+                <TerritorySelector />
+              </div>
+            )}
 
             {/* Logo untuk mobile */}
             <Link to="/" className="lg:hidden">

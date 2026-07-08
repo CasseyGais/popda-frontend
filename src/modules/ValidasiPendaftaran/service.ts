@@ -59,12 +59,24 @@ export interface RekapAtlet {
   nama_lengkap: string;
   jenis_kelamin: "L" | "P";
   tanggal_lahir: string;
+  tempat_lahir: string | null;
   nisn: string;
+  nis: string | null;
   sekolah: string;
   kelas_jurusan: string | null;
+  alamat: string | null;
   kabupaten_kota: string;
   no_hp: string | null;
+  nama_ortu_wali: string | null;
   status: string;
+  foto: string | null;
+  file_kartu_pelajar: string | null;
+  file_akte_kelahiran: string | null;
+  file_kk: string | null;
+  file_surat_keterangan_sekolah: string | null;
+  file_surat_izin_ortu: string | null;
+  prestasi_sebelumnya: string | null;
+  catatan: string | null;
   trx: {
     atlet_id: number;
     cabor_id: number;
@@ -81,9 +93,24 @@ export interface RekapPelatih {
   id: number;
   nama_lengkap: string;
   jenis_kelamin: "L" | "P";
+  tanggal_lahir: string | null;
+  tempat_lahir: string | null;
+  nik: string | null;
+  sekolah_asal: string | null;
+  profesi: string | null;
   jabatan: string | null;
+  alamat: string | null;
+  kabupaten_kota: string;
   no_hp: string;
+  email: string | null;
+  nama_istri_suami: string | null;
   status: string;
+  foto: string | null;
+  file_ktp: string | null;
+  file_surat_tugas: string | null;
+  file_sertifikat_pelatih: string | null;
+  prestasi_sebelumnya: string | null;
+  catatan: string | null;
   trx: { pelatih_id: number; cabor_id: number; nama_cabor: string }[];
 }
 
@@ -92,9 +119,20 @@ export interface RekapOfficial {
   id: number;
   nama_lengkap: string;
   jenis_kelamin: "L" | "P";
+  tanggal_lahir: string | null;
+  tempat_lahir: string | null;
+  nik: string | null;
+  sekolah_asal: string | null;
   jabatan: string;
+  alamat: string | null;
+  kabupaten_kota: string;
   no_hp: string;
+  email: string | null;
   status: string;
+  foto: string | null;
+  file_ktp: string | null;
+  file_surat_tugas: string | null;
+  catatan: string | null;
   trx: { keterangan: string }[];
 }
 
@@ -148,7 +186,23 @@ export const getValidasiStatus = (territoryId?: number): Promise<ValidasiStatusR
  */
 export const getRekapPendaftaran = (territoryId?: number): Promise<RekapPendaftaran> => {
   const params = territoryId ? { territory_id: territoryId } : {};
-  return api.get("/admin/rekap-pendaftaran", { params }).then(r => r.data.data);
+  return api.get("/admin/rekap-pendaftaran", { params }).then(r => {
+    const d = r.data.data;
+    // Normalisasi semua array agar tidak crash jika backend return null
+    return {
+      ...d,
+      cabor_terpilih:   Array.isArray(d?.cabor_terpilih)   ? d.cabor_terpilih   : [],
+      nomor_terdaftar:  Array.isArray(d?.nomor_terdaftar)  ? d.nomor_terdaftar  : [],
+      atlets:           Array.isArray(d?.atlets)           ? d.atlets           : [],
+      pelatihs:         Array.isArray(d?.pelatihs)         ? d.pelatihs         : [],
+      officials:        Array.isArray(d?.officials)        ? d.officials        : [],
+      validasi: d?.validasi ?? {
+        tahap1: { status: null, catatan: null },
+        tahap2: { status: null, catatan: null },
+        tahap3: { status: null, catatan: null },
+      },
+    };
+  });
 };
 
 /**

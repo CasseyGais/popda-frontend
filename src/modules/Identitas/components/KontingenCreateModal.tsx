@@ -229,9 +229,6 @@ export default function KontingenCreateModal({
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 px-6 sm:px-10 py-5 border-t border-gray-100 dark:border-gray-800">
-          <Button size="sm" variant="outline" onClick={onClose} disabled={loading}>
-            Batal
-          </Button>
           <Button size="sm" onClick={handleSave} disabled={loading}>
             {loading ? "Menyimpan..." : "Daftarkan Kontingen"}
           </Button>

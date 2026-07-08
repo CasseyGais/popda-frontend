@@ -225,7 +225,7 @@ export default function TrxModal({ isOpen, onClose, type, person, territoryId }:
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="max-w-[480px] m-4">
-      <div className="no-scrollbar relative w-full overflow-y-auto rounded-3xl bg-white dark:bg-gray-900 p-6 lg:p-8">
+      <div className="no-scrollbar relative w-full max-h-[90vh] overflow-y-auto rounded-3xl bg-white dark:bg-gray-900 p-6 lg:p-8">
 
         <div className="mb-5 pr-8">
           <h4 className="text-lg font-semibold text-gray-800 dark:text-white">{title}</h4>
@@ -357,11 +357,6 @@ export default function TrxModal({ isOpen, onClose, type, person, territoryId }:
           </div>
         )}
 
-        <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
-          <Button size="sm" variant="outline" onClick={onClose} disabled={saving}>
-            Tutup
-          </Button>
-        </div>
       </div>
     </Modal>
   );

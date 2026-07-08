@@ -11,6 +11,8 @@ interface InputProps {
   className?: string;
   min?: string;
   max?: string;
+  maxLength?: number;
+  minLength?: number;
   step?: number;
   disabled?: boolean;
   success?: boolean;
@@ -29,6 +31,8 @@ const Input: FC<InputProps> = ({
   className = "",
   min,
   max,
+  maxLength,
+  minLength,
   step,
   disabled = false,
   success = false,
@@ -43,8 +47,8 @@ const Input: FC<InputProps> = ({
     inputClasses += ` [-moz-appearance:_textfield] [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none`;
   }
 
-  // Style date input calendar icon for light/dark mode support
-  if (type === "date") {
+  // Style date/time picker indicator icons for light/dark mode support
+  if (type === "date" || type === "time") {
     inputClasses += ` [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:w-4 [&::-webkit-calendar-picker-indicator]:h-4 [&::-webkit-calendar-picker-indicator]:hover:opacity-70 dark:[&::-webkit-calendar-picker-indicator]:invert dark:[&::-webkit-calendar-picker-indicator]:filter`;
   }
 
@@ -69,6 +73,8 @@ const Input: FC<InputProps> = ({
         onChange={onChange}
         min={min}
         max={max}
+        maxLength={maxLength}
+        minLength={minLength}
         step={step}
         disabled={disabled}
         required={required}

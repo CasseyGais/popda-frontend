@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import PageMeta from "../../../components/common/PageMeta";
 import PageBreadcrumb from "../../../components/common/PageBreadCrumb";
 import { useAuth } from "../../../context/AuthContext";
@@ -6,17 +7,19 @@ import { useTerritory } from "../../../context/TerritoryContext";
 import {
   getAtlets, getPelatihs, getOfficials,
   deleteAtlet, deletePelatih, deleteOfficial,
-  getTahap3Status, submitTahap3,
+  getTahap3Status, submitTahap3, resetTahap3,
   MasterAtlet, MasterPelatih, MasterOfficial, Tahap3Status,
 } from "../service";
 import { pengaturanTahapService, PengaturanTahap } from "../../PengaturanTahap/service";
 import { kontingenService, Kontingen } from "../../Identitas/service";
+import { getTahap2 } from "../../Bynumber/service";
 import AtletModal from "../components/AtletModal";
 import PelatihModal from "../components/PelatihModal";
 import OfficialModal from "../components/OfficialModal";
 import TrxModal from "../components/TrxModal";
 import ExportButtons from "../../../components/ui/ExportButtons";
 import { exportTahap3PDF, exportTahap3Excel } from "../../../utils/exportHelper";
+import { ResetTahapButton } from "../../../components/popda/ResetTahapButton";
 
 // ─── Types & helpers ──────────────────────────────────────
 
@@ -117,6 +120,7 @@ export default function MainPage() {
    *   - Superadmin → dari ?territory_id=X → SELECT id FROM kontingen WHERE territory_id=X
    */
   const isSuperAdmin = can("*");
+  const navigate     = useNavigate();
   const territoryId  = isSuperAdmin ? currentTerritory?.id : undefined;
 
   const [activeTab, setActiveTab]   = useState<Tab>("atlet");
@@ -160,6 +164,14 @@ export default function MainPage() {
     setLoading(true);
     setError("");
     try {
+      // Cek tahap2 status terlebih dahulu — jika DRAFT, arahkan ke tahap 2
+      const tahap2Res = await getTahap2(tid);
+      if (tahap2Res.data?.tahap2_status !== "SUBMITTED") {
+        setError("tahap2_belum_submit");
+        setLoading(false);
+        return;
+      }
+
       const [aRes, pRes, oRes, statusRes, pengaturanList] = await Promise.all([
         getAtlets(tid),
         getPelatihs(tid),
@@ -175,7 +187,14 @@ export default function MainPage() {
       setValidasiCatatan(statusRes.tahap3_validasi_catatan);
       setPengaturan(pengaturanTahapService.getByTahap(pengaturanList, 3));
     } catch (e: any) {
-      setError(e.message || "Gagal memuat data");
+      const msg: string = e.message || "Gagal memuat data";
+      const status = e?.response?.status ?? 0;
+      // 400 dari backend = tahap 2 belum submit
+      if (status === 400 || msg.toLowerCase().includes("tahap 2") || msg.toLowerCase().includes("tahap2")) {
+        setError("tahap2_belum_submit");
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -272,6 +291,16 @@ export default function MainPage() {
 
   const hasData = atlets.length > 0 || pelatihs.length > 0 || officials.length > 0;
   const tahapTutup = !isSuperAdmin && pengaturan !== null && !pengaturan.is_open;
+  // Superadmin selalu bisa CRUD, admin biasa dibatasi oleh status dan tahap
+  const canEdit = isSuperAdmin || (tahap3Status !== "SUBMITTED" && !tahapTutup);
+  // Superadmin bisa reset ke DRAFT kapan saja data sudah SUBMITTED
+  const canReset = isSuperAdmin && tahap3Status === "SUBMITTED";
+
+  const handleReset = async () => {
+    await resetTahap3(territoryId!);
+    await fetchAll(territoryId);
+    if (isSuperAdmin && currentTerritory?.id) fetchKontingen(currentTerritory.id);
+  };
 
   const handleExportPDF   = () => exportTahap3PDF(kontigenName, territoryId);
   const handleExportExcel = () => exportTahap3Excel(kontigenName, territoryId);
@@ -309,7 +338,7 @@ export default function MainPage() {
             )}
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            {!loading && (
+            {!loading && error !== "tahap2_belum_submit" && (
               <div className="flex gap-2 flex-wrap">
                 <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
                   Atlet: {atlets.length}
@@ -322,10 +351,13 @@ export default function MainPage() {
                 </span>
               </div>
             )}
-            {!loading && hasData && (
+            {!loading && error !== "tahap2_belum_submit" && hasData && (
               <ExportButtons onExportPDF={handleExportPDF} onExportExcel={handleExportExcel} />
             )}
             {!loading && <StatusBadge status={tahap3Status} />}
+            {!loading && canReset && (
+              <ResetTahapButton tahap={3} onReset={handleReset} />
+            )}
           </div>
         </div>
 
@@ -346,18 +378,6 @@ export default function MainPage() {
                 </p>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Banner submitted */}
-        {!loading && tahap3Status === "SUBMITTED" && (
-          <div className="rounded-xl border border-green-200 bg-green-50 dark:border-green-800/40 dark:bg-green-900/20 px-5 py-3 flex items-center gap-3">
-            <svg className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-sm font-medium text-green-700 dark:text-green-400">
-              Tahap 3 sudah disubmit. Data tidak dapat diubah.
-            </p>
           </div>
         )}
 
@@ -388,42 +408,96 @@ export default function MainPage() {
             <p className="text-sm text-blue-700 dark:text-blue-400">Tahap 3 sedang menunggu validasi dari panitia.</p>
           </div>
         )}
-        {!loading && tahap3Status === "SUBMITTED" && validasiStatus === "VALID" && (
-          <div className="rounded-xl border border-green-300 bg-green-50 dark:border-green-700/40 dark:bg-green-900/20 px-5 py-3 flex items-center gap-3">
-            <svg className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-            <p className="text-sm font-medium text-green-700 dark:text-green-400">Tahap 3 telah divalidasi oleh panitia. ✅</p>
+
+        {/* Tahap 2 belum disubmit → navigasi card */}
+        {error === "tahap2_belum_submit" && (
+          <div className="flex flex-col items-center justify-center py-16 gap-4">
+            <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Tahap 2 belum diisi</p>
+              <p className="text-xs text-gray-400 mt-1">Selesaikan Entry By Number terlebih dahulu sebelum mendaftarkan atlet per nama.</p>
+            </div>
+            <button
+              onClick={() => navigate("/atlet-by-numbers")}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+              Mulai Tahap II: Entry By Number
+            </button>
           </div>
         )}
 
-        {error && (
+        {error && error !== "tahap2_belum_submit" && (
           <div className="rounded-xl border border-red-200 bg-red-50 dark:border-red-800/40 dark:bg-red-900/20 px-5 py-3">
             <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="flex border-b border-gray-200 dark:border-gray-700 gap-1">
-          {(["atlet", "pelatih", "official"] as Tab[]).map(tab => (
-            <button key={tab} type="button" onClick={() => setActiveTab(tab)}
-              className={[
-                "px-5 py-2.5 text-sm font-medium capitalize transition-colors border-b-2 -mb-px",
-                activeTab === tab
-                  ? "border-brand-500 text-brand-600 dark:text-brand-400"
-                  : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
-              ].join(" ")}>
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              {!loading && (
-                <span className="ml-2 px-1.5 py-0.5 rounded-full text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
-                  {tab === "atlet" ? atlets.length : tab === "pelatih" ? pelatihs.length : officials.length}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+        {/* Tabs — hanya tampil jika tidak sedang error tahap2 */}
+        {error !== "tahap2_belum_submit" && (
+        <div className="flex items-end justify-between border-b border-gray-200 dark:border-gray-700">
+          {/* Tabs */}
+          <div className="flex gap-1">
+            {(["atlet", "pelatih", "official"] as Tab[]).map(tab => (
+              <button key={tab} type="button" onClick={() => setActiveTab(tab)}
+                className={[
+                  "px-5 py-2.5 text-sm font-medium capitalize transition-colors border-b-2 -mb-px",
+                  activeTab === tab
+                    ? "border-brand-500 text-brand-600 dark:text-brand-400"
+                    : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
+                ].join(" ")}>
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {!loading && (
+                  <span className="ml-2 px-1.5 py-0.5 rounded-full text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                    {tab === "atlet" ? atlets.length : tab === "pelatih" ? pelatihs.length : officials.length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
 
-        {loading ? (
+          {/* Tombol Tambah — sejajar kanan, muncul sesuai tab aktif */}
+          {!loading && canEdit && (
+            <div className="pb-1">
+              {activeTab === "atlet" && can("trx_pendaftaran_atlet.create") && (
+                <button type="button" onClick={() => openAtlet("create")}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium transition-colors">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Tambah Atlet
+                </button>
+              )}
+              {activeTab === "pelatih" && can("master_pelatih.create") && (
+                <button type="button" onClick={() => openPelatih("create")}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium transition-colors">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Tambah Pelatih
+                </button>
+              )}
+              {activeTab === "official" && can("master_official.create") && (
+                <button type="button" onClick={() => openOfficial("create")}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium transition-colors">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Tambah Official
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+        )}
+
+        {error !== "tahap2_belum_submit" && (loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500" />
             <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -436,17 +510,6 @@ export default function MainPage() {
             {/* ── TAB: ATLET ── */}
             {activeTab === "atlet" && (
               <div className="space-y-4">
-                <div className="flex justify-end">
-                  {can("trx_pendaftaran_atlet.create") && !tahapTutup && (
-                    <button type="button" onClick={() => openAtlet("create")}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium transition-colors">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                      Tambah Atlet
-                    </button>
-                  )}
-                </div>
                 <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
                   {atlets.length === 0 ? (
                     <p className="py-12 text-center text-sm text-gray-400">Belum ada atlet. Klik Tambah Atlet untuk memulai.</p>
@@ -474,9 +537,9 @@ export default function MainPage() {
                               <td className="px-4 py-3">
                                 <RowActions
                                   onView={() => openAtlet("view", a)}
-                                  onEdit={tahap3Status !== "SUBMITTED" && !tahapTutup && can("trx_pendaftaran_atlet.update") ? () => openAtlet("edit", a) : undefined}
-                                  onDaftar={tahap3Status !== "SUBMITTED" && !tahapTutup && can("trx_pendaftaran_atlet.create") ? () => openTrx("atlet", a) : undefined}
-                                  onDelete={tahap3Status !== "SUBMITTED" && !tahapTutup && can("trx_pendaftaran_atlet.delete") ? () => handleDeleteAtlet(a.id, a.nama_lengkap) : undefined}
+                                  onEdit={canEdit && can("trx_pendaftaran_atlet.update") ? () => openAtlet("edit", a) : undefined}
+                                  onDaftar={canEdit && can("trx_pendaftaran_atlet.create") ? () => openTrx("atlet", a) : undefined}
+                                  onDelete={canEdit && can("trx_pendaftaran_atlet.delete") ? () => handleDeleteAtlet(a.id, a.nama_lengkap) : undefined}
                                 />
                               </td>
                             </tr>
@@ -492,17 +555,6 @@ export default function MainPage() {
             {/* ── TAB: PELATIH ── */}
             {activeTab === "pelatih" && (
               <div className="space-y-4">
-                <div className="flex justify-end">
-                  {can("master_pelatih.create") && !tahapTutup && (
-                    <button type="button" onClick={() => openPelatih("create")}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium transition-colors">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                      Tambah Pelatih
-                    </button>
-                  )}
-                </div>
                 <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
                   {pelatihs.length === 0 ? (
                     <p className="py-12 text-center text-sm text-gray-400">Belum ada pelatih.</p>
@@ -530,9 +582,9 @@ export default function MainPage() {
                               <td className="px-4 py-3">
                                 <RowActions
                                   onView={() => openPelatih("view", p)}
-                                  onEdit={tahap3Status !== "SUBMITTED" && !tahapTutup && can("master_pelatih.update") ? () => openPelatih("edit", p) : undefined}
-                                  onDaftar={tahap3Status !== "SUBMITTED" && !tahapTutup && can("trx_pendaftaran_pelatih.create") ? () => openTrx("pelatih", p) : undefined}
-                                  onDelete={tahap3Status !== "SUBMITTED" && !tahapTutup && can("master_pelatih.delete") ? () => handleDeletePelatih(p.id, p.nama_lengkap) : undefined}
+                                  onEdit={canEdit && can("master_pelatih.update") ? () => openPelatih("edit", p) : undefined}
+                                  onDaftar={canEdit && can("trx_pendaftaran_pelatih.create") ? () => openTrx("pelatih", p) : undefined}
+                                  onDelete={canEdit && can("master_pelatih.delete") ? () => handleDeletePelatih(p.id, p.nama_lengkap) : undefined}
                                 />
                               </td>
                             </tr>
@@ -548,17 +600,6 @@ export default function MainPage() {
             {/* ── TAB: OFFICIAL ── */}
             {activeTab === "official" && (
               <div className="space-y-4">
-                <div className="flex justify-end">
-                  {can("master_official.create") && !tahapTutup && (
-                    <button type="button" onClick={() => openOfficial("create")}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium transition-colors">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                      Tambah Official
-                    </button>
-                  )}
-                </div>
                 <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
                   {officials.length === 0 ? (
                     <p className="py-12 text-center text-sm text-gray-400">Belum ada official.</p>
@@ -586,9 +627,9 @@ export default function MainPage() {
                               <td className="px-4 py-3">
                                 <RowActions
                                   onView={() => openOfficial("view", o)}
-                                  onEdit={tahap3Status !== "SUBMITTED" && !tahapTutup && can("master_official.update") ? () => openOfficial("edit", o) : undefined}
-                                  onDaftar={tahap3Status !== "SUBMITTED" && !tahapTutup && can("trx_pendaftaran_official.create") ? () => openTrx("official", o) : undefined}
-                                  onDelete={tahap3Status !== "SUBMITTED" && !tahapTutup && can("master_official.delete") ? () => handleDeleteOfficial(o.id, o.nama_lengkap) : undefined}
+                                  onEdit={canEdit && can("master_official.update") ? () => openOfficial("edit", o) : undefined}
+                                  onDaftar={canEdit && can("trx_pendaftaran_official.create") ? () => openTrx("official", o) : undefined}
+                                  onDelete={canEdit && can("master_official.delete") ? () => handleDeleteOfficial(o.id, o.nama_lengkap) : undefined}
                                 />
                               </td>
                             </tr>
@@ -601,10 +642,10 @@ export default function MainPage() {
               </div>
             )}
           </>
-        )}
+        ))}
 
         {/* Submit Tahap 3 — tampil saat DRAFT/null, ada data, dan tahap terbuka */}
-        {!loading && (tahap3Status === "DRAFT" || (tahap3Status as string | null) === null) && hasData && !tahapTutup && (
+        {!loading && error !== "tahap2_belum_submit" && (tahap3Status === "DRAFT" || (tahap3Status as string | null) === null) && hasData && !tahapTutup && (
           <div className="flex justify-end">
             <button
               type="button"

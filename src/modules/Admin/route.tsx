@@ -11,7 +11,7 @@ import PengaturanTahapPage from "./pages/PengaturanTahapPage";
 import ValidasiPendaftaranPage from "./pages/ValidasiPendaftaranPage";
 
 const wrap = (Page: React.ComponentType) => (
-  <ProtectedRoute>
+  <ProtectedRoute blockedRoles={["STAFF_LAPANGAN"]}>
     <DashboardLayout>
       <Page />
     </DashboardLayout>

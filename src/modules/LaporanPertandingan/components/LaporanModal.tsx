@@ -173,13 +173,33 @@ export default function LaporanModal({ isOpen, onClose, mode, data, onSuccess }:
       setError("Field bertanda * wajib diisi");
       return;
     }
+
+    // Validasi: jika nomor bertipe INDIVIDU, wajib ada minimal 1 atlet valid di sisi A
+    const selectedNomor = nomorList.find(n => n.id === Number(nomorId));
+    const atletAFinal = atletA.filter(id => id !== 0);
+    const atletBFinal = atletB.filter(id => id !== 0);
+
+    if (selectedNomor?.tipe === "INDIVIDU") {
+      if (atletAFinal.length === 0) {
+        setError("Nomor bertipe INDIVIDU — wajib pilih minimal 1 atlet untuk Tim A. Pastikan atlet sudah didaftarkan di nomor ini (Tahap III).");
+        return;
+      }
+    }
+
+    // Validasi: atlet yang dipilih harus ada di daftar (terdaftar di nomor ini)
+    const atletAIds = new Set(atletAList.map(a => a.atlet_id));
+    const atletBIds = new Set(atletBList.map(a => a.atlet_id));
+    const invalidA = atletAFinal.filter(id => !atletAIds.has(id));
+    const invalidB = atletBFinal.filter(id => !atletBIds.has(id));
+    if (invalidA.length > 0 || invalidB.length > 0) {
+      setError("Beberapa atlet yang dipilih tidak terdaftar di nomor pertandingan ini. Periksa kembali pendaftaran atlet di Tahap III.");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
       let result: LaporanDetail;
       if (mode === "create") {
-        const atletAFinal = atletA.filter(id => id !== 0);
-        const atletBFinal = atletB.filter(id => id !== 0);
         const payload: CreateLaporanPayload = {
           tanggal_pertandingan: tanggal,
           waktu_pertandingan:   waktu.length === 5 ? waktu + ":00" : waktu,
@@ -200,8 +220,6 @@ export default function LaporanModal({ isOpen, onClose, mode, data, onSuccess }:
         };
         result = await laporanPertandinganService.create(payload);
       } else {
-        const atletAFinal = atletA.filter(id => id !== 0);
-        const atletBFinal = atletB.filter(id => id !== 0);
         const payload: UpdateLaporanPayload = {
           tanggal_pertandingan: tanggal,
           waktu_pertandingan:   waktu.length === 5 ? waktu + ":00" : waktu,
@@ -264,7 +282,7 @@ export default function LaporanModal({ isOpen, onClose, mode, data, onSuccess }:
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="max-w-[720px] m-4">
-      <div className="no-scrollbar relative w-full overflow-y-auto rounded-3xl bg-white dark:bg-gray-900 p-6 lg:p-8">
+      <div className="no-scrollbar relative w-full max-h-[90vh] overflow-y-auto rounded-3xl bg-white dark:bg-gray-900 p-6 lg:p-8">
 
         {/* Header */}
         <div className="mb-5 pr-8">
@@ -583,10 +601,7 @@ export default function LaporanModal({ isOpen, onClose, mode, data, onSuccess }:
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
-          <Button size="sm" variant="outline" onClick={onClose} disabled={loading || anyUploading}>
-            {isView ? "Tutup" : "Batal"}
-          </Button>
+        <div className="flex items-center justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
           {!isView && (
             <Button
               size="sm"

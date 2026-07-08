@@ -4,8 +4,13 @@ import TargetKabKota from "../../../components/popda/TargetKabKota";
 import RecentPendaftaran from "../../../components/popda/RecentPendaftaran";
 import NavButton from "../../../components/popda/NavButton";
 import StatusValidasi from "../../../components/popda/StatusValidasi";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function Dashboard() {
+  const { user, can } = useAuth();
+  const isStaffLapangan = user?.role?.name === "STAFF_LAPANGAN";
+  const isSuperAdmin    = can("*");
+
   return (
     <>
       <PageMeta
@@ -22,14 +27,56 @@ export default function Dashboard() {
             <h3 className="mb-3 text-xl font-bold text-gray-800 dark:text-white/90">
               Tindakan Cepat
             </h3>
-            <div className="grid grid-cols-1 gap-4">
-              <NavButton
-                to="/atlet-by-sports"
-                label="Mulai Pendaftaran"
-                iconType="form"
-                color="primary"
-              />
-            </div>
+
+            {isStaffLapangan ? (
+              /* STAFF_LAPANGAN — Laporan Pertandingan & Sertifikat */
+              <div className="grid grid-cols-2 gap-4">
+                <NavButton
+                  to="/laporan-pertandingan"
+                  label="Laporan Pertandingan"
+                  iconType="docs"
+                  color="primary"
+                />
+                <NavButton
+                  to="/sertifikat"
+                  label="Cetak Sertifikat"
+                  iconType="page"
+                  color="success"
+                />
+              </div>
+            ) : isSuperAdmin ? (
+              /* SUPERADMIN — Validasi Pendaftaran & Rekap Pendaftaran */
+              <div className="grid grid-cols-2 gap-4">
+                <NavButton
+                  to="/admin/validasi-pendaftaran"
+                  label="Validasi Pendaftaran"
+                  iconType="task"
+                  color="warning"
+                />
+                <NavButton
+                  to="/rekap-pendaftaran"
+                  label="Rekap Pendaftaran"
+                  iconType="docs"
+                  color="info"
+                />
+              </div>
+            ) : (
+              /* ADMIN — Identitas Kontingen + Mulai Pendaftaran */
+              <div className="grid grid-cols-2 gap-4">
+                <NavButton
+                  to="/identitas-kontingen"
+                  label="Identitas Kontingen"
+                  iconType="group"
+                  color="info"
+                />
+                <NavButton
+                  to="/atlet-by-sports"
+                  label="Mulai Pendaftaran"
+                  iconType="form"
+                  color="primary"
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -38,10 +85,12 @@ export default function Dashboard() {
           <TargetKabKota />
         </div>
 
-        {/* Status Validasi Pendaftaran — full width */}
-        <div className="col-span-12">
-          <StatusValidasi />
-        </div>
+        {/* Status Validasi Pendaftaran — full width, disembunyikan untuk STAFF_LAPANGAN */}
+        {!isStaffLapangan && (
+          <div className="col-span-12">
+            <StatusValidasi />
+          </div>
+        )}
 
         {/* Jadwal Tahap Pendaftaran — full width */}
         <div className="col-span-12">

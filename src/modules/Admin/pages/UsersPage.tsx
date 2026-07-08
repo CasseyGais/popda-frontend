@@ -81,7 +81,18 @@ export default function UsersPage() {
     try {
       setModalLoading(true);
       const hashedPassword = await sha256(form.password);
-      await userService.create({ name: form.name, email: form.email, password: hashedPassword });
+      // 1. Buat user dulu
+      const createRes = await userService.create({ name: form.name, email: form.email, password: hashedPassword });
+      const newUserId: number = createRes?.data?.id ?? createRes?.id;
+
+      // 2. Assign role & territory jika dipilih (paralel)
+      if (newUserId) {
+        const tasks: Promise<any>[] = [];
+        if (selectedRoleId)      tasks.push(userService.assignRole(newUserId, Number(selectedRoleId)));
+        if (selectedTerritoryId) tasks.push(userService.assignTerritory(newUserId, Number(selectedTerritoryId)));
+        if (tasks.length) await Promise.all(tasks);
+      }
+
       setIsOpen(false);
       fetchAll();
     } catch (e: any) { alert("Gagal: " + (e.response?.data?.message || e.message)); }
@@ -207,9 +218,39 @@ export default function UsersPage() {
           <label htmlFor="is_active" className="text-sm text-gray-700 dark:text-gray-300">Aktif</label>
         </div>
       )}
-      {mode === "edit" && (
+
+      {/* ── Role & Territory — tampil di create (sekali pilih) dan edit (assign/remove) ── */}
+      <hr className="border-gray-200 dark:border-gray-700" />
+
+      {mode === "create" ? (
+        /* Form create: dropdown langsung pilih, di-assign saat Simpan */
         <>
-          <hr className="border-gray-200 dark:border-gray-700" />
+          <div>
+            <Label>Role <span className="text-gray-400 font-normal">(opsional)</span></Label>
+            <select
+              value={selectedRoleId}
+              onChange={e => setSelectedRoleId(Number(e.target.value) || "")}
+              className="w-full h-11 rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 dark:border-gray-700 dark:text-white dark:bg-gray-900"
+            >
+              <option value="">-- Pilih Role --</option>
+              {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <Label>Territory <span className="text-gray-400 font-normal">(opsional)</span></Label>
+            <select
+              value={selectedTerritoryId}
+              onChange={e => setSelectedTerritoryId(Number(e.target.value) || "")}
+              className="w-full h-11 rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 dark:border-gray-700 dark:text-white dark:bg-gray-900"
+            >
+              <option value="">-- Pilih Territory --</option>
+              {territories.map(t => <option key={t.id} value={t.id}>{t.name} ({t.type})</option>)}
+            </select>
+          </div>
+        </>
+      ) : (
+        /* Form edit: assign/remove secara live */
+        <>
           <div>
             <Label>Role</Label>
             <div className="flex gap-2 mb-2">

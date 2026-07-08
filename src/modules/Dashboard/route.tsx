@@ -5,6 +5,12 @@ import ProtectedRoute from "../Auth/components/ProtectedRoute";
 export const dashboardRoutes = [
     {
         path: "/dashboard",
-        element: <ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>,
+        element: (
+            <ProtectedRoute>
+                <DashboardLayout>
+                    <Dashboard />
+                </DashboardLayout>
+            </ProtectedRoute>
+        ),
     },
 ];

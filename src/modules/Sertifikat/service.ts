@@ -66,6 +66,19 @@ export interface PenerimaSingkat {
   nama_kontingen: string;
 }
 
+/**
+ * Data satu penandatangan untuk export PDF.
+ * signature_b64: output dari signaturePad.toDataURL("image/png")
+ * Backend terima dengan atau tanpa data URI prefix.
+ * String kosong / tidak ada = placeholder garis kosong di PDF.
+ */
+export interface TTDSertifikat {
+  jabatan: string;         // "Ketua Pelaksana", "Kepala Dinas", dll
+  nama_tercetak: string;   // nama yang dicetak di bawah garis
+  nip?: string;            // opsional
+  signature_b64?: string;  // base64 PNG dari signature pad canvas
+}
+
 // ─── Helper ──────────────────────────────────────────────
 
 /**
@@ -174,13 +187,19 @@ export const sertifikatService = {
     api.get("/admin/sertifikat/penerima/official").then(r => r.data.data),
 
   /**
-   * GET /admin/sertifikat/:id/export/pdf
-   * Generate PDF landscape A4 satu sertifikat.
+   * POST /admin/sertifikat/:id/export/pdf
+   * Generate PDF landscape A4 satu sertifikat + tanda tangan opsional.
+   * Pakai POST agar bisa kirim body JSON dengan data TTD.
+   * Jika ttds kosong → PDF dengan placeholder garis TTD.
    */
-  exportPDF: async (id: number, namaPenerima: string): Promise<void> => {
-    const token = getToken();
+  exportPDF: async (id: number, namaPenerima: string, ttds: TTDSertifikat[] = []): Promise<void> => {
     const res = await fetch(`${BASE_URL}/admin/sertifikat/${id}/export/pdf`, {
-      headers: { Authorization: `Bearer ${token}` },
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${getToken()}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ penandatangan: ttds }),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
@@ -196,14 +215,21 @@ export const sertifikatService = {
   },
 
   /**
-   * GET /admin/sertifikat/export/batch/pdf
-   * Generate PDF batch semua sertifikat (atau filtered by tipe).
+   * POST /admin/sertifikat/export/batch/pdf
+   * Generate PDF batch — satu file multi-halaman. TTD hanya di halaman terakhir.
+   * Pakai POST agar bisa kirim body JSON dengan data TTD.
+   * Query param tipe opsional untuk filter.
+   * 404 jika tidak ada data.
    */
-  exportBatchPDF: async (tipe?: TipePenerima): Promise<void> => {
-    const token = getToken();
+  exportBatchPDF: async (tipe?: TipePenerima, ttds: TTDSertifikat[] = []): Promise<void> => {
     const params = tipe ? `?tipe=${tipe}` : "";
     const res = await fetch(`${BASE_URL}/admin/sertifikat/export/batch/pdf${params}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${getToken()}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ penandatangan: ttds }),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));

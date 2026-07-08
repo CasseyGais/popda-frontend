@@ -2,12 +2,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import {
+  BoxCubeIcon,
   ChevronDownIcon,
+  DocsIcon,
   FormIcon,
   GridIcon,
+  GroupIcon,
   HorizontaLDots,
   ListIcon,
+  PageIcon,
+  PieChartIcon,
+  PlugInIcon,
   TableIcon,
+  TaskIcon,
   UserCircleIcon,
 } from "../../../icons";
 import { useSidebar } from "../../../context/SidebarContext";
@@ -24,40 +31,47 @@ const othersItems: NavItem[] = [];
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
-  const { can, permissions } = useAuth();
+  const { can, permissions, user } = useAuth();
   const location = useLocation();
 
   // Hanya SUPERADMIN yang punya wildcard '*'
   const isSuperAdmin = permissions.includes("*");
 
+  // Deteksi STAFF_LAPANGAN — role dengan akses terbatas
+  const isStaffLapangan = user?.role?.name === "STAFF_LAPANGAN";
+
   // ─── Menu item yang ditampilkan berdasarkan permission ────
-  // Item utama — filter per permission
-  const navItems: NavItem[] = [
-    { icon: <GridIcon />,       name: "Beranda",               path: "/dashboard" },
-    { icon: <UserCircleIcon />, name: "Identitas Kontingen",   path: "/identitas-kontingen" },
-    ...(can("trx_kontingen_cabor.read")   ? [{ icon: <FormIcon />,  name: "Tahap I: Entry By Sport",   path: "/atlet-by-sports" }]  : []),
-    ...(can("trx_kontingen_nomor.read")   ? [{ icon: <ListIcon />,  name: "Tahap II: Entry By Number", path: "/atlet-by-numbers" }] : []),
-    ...(can("trx_pendaftaran_atlet.read") ? [{ icon: <TableIcon />, name: "Tahap III: Entry By Name",  path: "/atlet-by-names" }]   : []),
-    // Rekap Pendaftaran — tampil untuk semua user yang login
-    { icon: <FormIcon />, name: "Rekap Pendaftaran", path: "/rekap-pendaftaran" },
-    // Validasi Pendaftaran — hanya superadmin
-    ...(isSuperAdmin ? [{ icon: <ListIcon />, name: "Validasi Pendaftaran", path: "/admin/validasi-pendaftaran" }] : []),
-    // Sertifikat — superadmin dan staff_lapangan
+
+  // STAFF_LAPANGAN hanya bisa akses: Beranda, Laporan Pertandingan, Sertifikat, Profil Pengguna
+  const navItems: NavItem[] = isStaffLapangan ? [
+    { icon: <GridIcon />,        name: "Beranda",               path: "/dashboard" },
+    { icon: <UserCircleIcon />,  name: "Profil Pengguna",           path: "/profil" },
+    { icon: <PageIcon />,        name: "Sertifikat",            path: "/sertifikat" },
+    { icon: <DocsIcon />,        name: "Laporan Pertandingan",  path: "/laporan-pertandingan" },
+  ] : [
+    // Item utama — filter per permission (untuk role selain STAFF_LAPANGAN)
+    { icon: <GridIcon />,        name: "Beranda",               path: "/dashboard" },
+    { icon: <UserCircleIcon />,  name: "Profil Pengguna",           path: "/profil" },
+    { icon: <GroupIcon />,       name: "Identitas Kontingen",   path: "/identitas-kontingen" },
+    ...(can("trx_kontingen_cabor.read")   ? [{ icon: <FormIcon />,   name: "Tahap I: Entry By Sport",   path: "/atlet-by-sports" }]  : []),
+    ...(can("trx_kontingen_nomor.read")   ? [{ icon: <ListIcon />,   name: "Tahap II: Entry By Number", path: "/atlet-by-numbers" }] : []),
+    ...(can("trx_pendaftaran_atlet.read") ? [{ icon: <TableIcon />,  name: "Tahap III: Entry By Name",  path: "/atlet-by-names" }]   : []),
+    { icon: <PieChartIcon />,    name: "Rekap Pendaftaran",     path: "/rekap-pendaftaran" },
+    ...(isSuperAdmin ? [{ icon: <TaskIcon />,   name: "Validasi Pendaftaran",  path: "/admin/validasi-pendaftaran" }] : []),
     ...(isSuperAdmin || can("sertifikat.read")
-      ? [{ icon: <TableIcon />, name: "Sertifikat", path: "/sertifikat" }]
+      ? [{ icon: <PageIcon />,   name: "Sertifikat",            path: "/sertifikat" }]
       : []),
-    // Laporan Pertandingan — semua role yang sudah login
-    { icon: <FormIcon />, name: "Laporan Pertandingan", path: "/laporan-pertandingan" },
+    { icon: <DocsIcon />,        name: "Laporan Pertandingan",  path: "/laporan-pertandingan" },
   ];
 
   // Master Data & Settings — HANYA untuk SUPERADMIN
   // Role lain (ADMIN, STAFF_LAPANGAN) tidak boleh melihat grup ini sama sekali
-  const masterDataSubItems = isSuperAdmin ? [
+  const masterDataSubItems = isSuperAdmin && !isStaffLapangan ? [
     { name: "Cabor", path: "/admin/cabor" },
     { name: "Nomor", path: "/admin/nomor" },
   ] : [];
 
-  const settingsSubItems = isSuperAdmin ? [
+  const settingsSubItems = isSuperAdmin && !isStaffLapangan ? [
     { name: "Users",               path: "/admin/users" },
     { name: "Roles",               path: "/admin/roles" },
     { name: "Territories",         path: "/admin/territories" },
@@ -69,12 +83,12 @@ const AppSidebar: React.FC = () => {
   // masterItems — hanya tampilkan grup jika ada sub-item (otomatis kosong untuk non-SUPERADMIN)
   const masterItems: NavItem[] = [
     ...(masterDataSubItems.length > 0 ? [{
-      icon: <ListIcon />,
+      icon: <BoxCubeIcon />,
       name: "Master Data",
       subItems: masterDataSubItems,
     }] : []),
     ...(settingsSubItems.length > 0 ? [{
-      icon: <TableIcon />,
+      icon: <PlugInIcon />,
       name: "Settings",
       subItems: settingsSubItems,
     }] : []),

@@ -23,14 +23,20 @@ import SertifikatMain from "../modules/Sertifikat/pages/MainPage";
 // Laporan Pertandingan
 import LaporanPertandinganMain from "../modules/LaporanPertandingan/pages/MainPage";
 
+// Profil
+import ProfilMain from "../modules/Profil/pages/MainPage";
+
 /** Wrap page dalam ProtectedRoute + DashboardLayout */
-const protect = (Page: React.ComponentType, permission?: string) => (
-  <ProtectedRoute requiredPermission={permission}>
+const protect = (Page: React.ComponentType, permission?: string, blockedRoles?: string[]) => (
+  <ProtectedRoute requiredPermission={permission} blockedRoles={blockedRoles}>
     <DashboardLayout>
       <Page />
     </DashboardLayout>
   </ProtectedRoute>
 );
+
+/** Role STAFF_LAPANGAN hanya boleh akses: /laporan-pertandingan, /sertifikat, /profil */
+const STAFF_LAPANGAN_BLOCKED = ["STAFF_LAPANGAN"];
 
 const AppRoutes = () => (
   <Routes>
@@ -55,26 +61,29 @@ const AppRoutes = () => (
       <Route key={`admin-${i}`} path={r.path} element={r.element} />
     ))}
 
-    {/* Identitas Kontingen */}
-    <Route path="/identitas-kontingen" element={protect(IdentitasMain)} />
+    {/* Identitas Kontingen — STAFF_LAPANGAN tidak boleh akses */}
+    <Route path="/identitas-kontingen" element={protect(IdentitasMain, undefined, STAFF_LAPANGAN_BLOCKED)} />
 
-    {/* Tahap 1 — Entry By Sport */}
-    <Route path="/atlet-by-sports"  element={protect(BysportMain,  "trx_kontingen_cabor.read")} />
+    {/* Tahap 1 — Entry By Sport — STAFF_LAPANGAN tidak boleh akses */}
+    <Route path="/atlet-by-sports"  element={protect(BysportMain,  "trx_kontingen_cabor.read", STAFF_LAPANGAN_BLOCKED)} />
 
-    {/* Tahap 2 — Entry By Number */}
-    <Route path="/atlet-by-numbers" element={protect(BynumberMain, "trx_kontingen_nomor.read")} />
+    {/* Tahap 2 — Entry By Number — STAFF_LAPANGAN tidak boleh akses */}
+    <Route path="/atlet-by-numbers" element={protect(BynumberMain, "trx_kontingen_nomor.read", STAFF_LAPANGAN_BLOCKED)} />
 
-    {/* Tahap 3 — Entry By Name */}
-    <Route path="/atlet-by-names"   element={protect(BynameMain,   "trx_pendaftaran_atlet.read")} />
+    {/* Tahap 3 — Entry By Name — STAFF_LAPANGAN tidak boleh akses */}
+    <Route path="/atlet-by-names"   element={protect(BynameMain,   "trx_pendaftaran_atlet.read", STAFF_LAPANGAN_BLOCKED)} />
 
-    {/* Rekap Pendaftaran — semua role yang sudah login */}
-    <Route path="/rekap-pendaftaran" element={protect(RekapMain)} />
+    {/* Rekap Pendaftaran — STAFF_LAPANGAN tidak boleh akses */}
+    <Route path="/rekap-pendaftaran" element={protect(RekapMain, undefined, STAFF_LAPANGAN_BLOCKED)} />
 
-    {/* Sertifikat — SUPERADMIN dan STAFF_LAPANGAN saja */}
+    {/* Sertifikat — semua role yang sudah login (termasuk STAFF_LAPANGAN) */}
     <Route path="/sertifikat" element={protect(SertifikatMain)} />
 
-    {/* Laporan Pertandingan — semua role yang sudah login */}
+    {/* Laporan Pertandingan — semua role yang sudah login (termasuk STAFF_LAPANGAN) */}
     <Route path="/laporan-pertandingan" element={protect(LaporanPertandinganMain)} />
+
+    {/* Profil — semua role yang sudah login (termasuk STAFF_LAPANGAN) */}
+    <Route path="/profil" element={protect(ProfilMain)} />
 
     {/* 404 fallback */}
     <Route path="*" element={<Navigate to="/login" replace />} />

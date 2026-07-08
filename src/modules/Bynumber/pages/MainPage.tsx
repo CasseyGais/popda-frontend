@@ -9,12 +9,14 @@ import {
   daftarNomor,
   batalNomor,
   submitTahap2,
+  resetTahap2,
   NomorItem,
   Tahap2Status,
 } from "../service";
 import { pengaturanTahapService, PengaturanTahap } from "../../PengaturanTahap/service";
 import ExportButtons from "../../../components/ui/ExportButtons";
 import { exportTahap2PDF, exportTahap2Excel } from "../../../utils/exportHelper";
+import { ResetTahapButton } from "../../../components/popda/ResetTahapButton";
 
 // ─── helpers ─────────────────────────────────────────────
 
@@ -86,7 +88,9 @@ export default function MainPage() {
       setPengaturan(pengaturanTahapService.getByTahap(pengaturanList, 2));
     } catch (e: any) {
       const msg: string = e.message || "Gagal memuat data";
-      if (msg.toLowerCase().includes("tahap 1")) {
+      const status = e?.response?.status ?? 0;
+      // 400 dari backend = tahap 1 belum submit (backend reject request)
+      if (status === 400 || msg.toLowerCase().includes("tahap 1") || msg.toLowerCase().includes("tahap1")) {
         setError("tahap1_belum_submit");
       } else {
         setError(msg);
@@ -103,8 +107,7 @@ export default function MainPage() {
 
   // ── toggle centang / uncentang satu nomor ──────────────
   const handleToggle = async (item: NomorItem) => {
-    if (tahap2Status === "SUBMITTED") return;
-    if (tahapTutup) return;
+    if (!canToggle) return;
     if (toggling.has(item.nomor_id)) return;
 
     // Check permission based on action
@@ -165,7 +168,18 @@ export default function MainPage() {
   const totalTerdaftar = nomorList.filter(n => n.terdaftar).length;
   const isSubmitted    = tahap2Status === "SUBMITTED";
   const tahapTutup     = !isSuperAdmin && pengaturan !== null && !pengaturan.is_open;
-  const canSubmit      = !isSubmitted && !tahapTutup && totalTerdaftar > 0;
+  // Superadmin selalu bisa ubah, admin biasa dibatasi status & tahap
+  const canToggle      = isSuperAdmin || (!isSubmitted && !tahapTutup);
+  // Tombol submit hanya muncul jika belum submit, atau sudah submit tapi tidak ada nomor terdaftar
+  const canSubmit      = (!isSubmitted && !tahapTutup && totalTerdaftar > 0)
+                       || (isSubmitted && totalTerdaftar === 0 && !tahapTutup);
+  // Superadmin bisa reset ke DRAFT kapan saja data sudah SUBMITTED
+  const canReset       = isSuperAdmin && isSubmitted;
+
+  const handleReset = async () => {
+    await resetTahap2(territoryId!);
+    await fetchAll(territoryId);
+  };
 
   const kontigenName = isSuperAdmin
     ? (currentTerritory?.name ?? "kontingen")
@@ -213,14 +227,15 @@ export default function MainPage() {
             )}
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            {!loading && nomorList.length > 0 && error !== "tahap1_belum_submit" && (
+            {!loading && error !== "tahap1_belum_submit" && (
               <ExportButtons
                 onExportPDF={handleExportPDF}
                 onExportExcel={handleExportExcel}
               />
             )}
-            {!loading && error !== "tahap1_belum_submit" && (
-              <StatusBadge status={tahap2Status} />
+            {!loading && <StatusBadge status={tahap2Status} />}
+            {!loading && canReset && (
+              <ResetTahapButton tahap={2} onReset={handleReset} />
             )}
           </div>
         </div>
@@ -241,16 +256,6 @@ export default function MainPage() {
                 </p>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Banner submitted */}
-        {!loading && isSubmitted && (
-          <div className="rounded-xl border border-green-200 bg-green-50 dark:border-green-800/40 dark:bg-green-900/20 px-5 py-3 flex items-center gap-3">
-            <svg className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-sm font-medium text-green-700 dark:text-green-400">Tahap 2 sudah disubmit.</p>
           </div>
         )}
 
@@ -281,31 +286,27 @@ export default function MainPage() {
             <p className="text-sm text-blue-700 dark:text-blue-400">Tahap 2 sedang menunggu validasi dari panitia.</p>
           </div>
         )}
-        {!loading && isSubmitted && validasiStatus === "VALID" && (
-          <div className="rounded-xl border border-green-300 bg-green-50 dark:border-green-700/40 dark:bg-green-900/20 px-5 py-3 flex items-center gap-3">
-            <svg className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-            <p className="text-sm font-medium text-green-700 dark:text-green-400">Tahap 2 telah divalidasi oleh panitia. ✅</p>
-          </div>
-        )}
 
-        {/* Error: tahap 1 belum submit */}
+        {/* Tahap 1 belum disubmit → navigasi card, bukan banner */}
         {error === "tahap1_belum_submit" && (
-          <div className="rounded-xl border border-yellow-200 bg-yellow-50 dark:border-yellow-800/40 dark:bg-yellow-900/20 px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          <div className="flex flex-col items-center justify-center py-16 gap-4">
+            <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
-              <p className="text-sm font-medium text-yellow-700 dark:text-yellow-400">
-                Tahap 1 belum disubmit. Selesaikan Tahap 1 terlebih dahulu.
-              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Tahap 1 belum diisi</p>
+              <p className="text-xs text-gray-400 mt-1">Selesaikan Entry By Sport terlebih dahulu sebelum mengisi nomor.</p>
             </div>
             <button
               onClick={() => navigate("/atlet-by-sports")}
-              className="shrink-0 px-4 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-semibold transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium transition-colors"
             >
-              Ke Tahap 1
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+              Mulai Tahap I: Entry By Sport
             </button>
           </div>
         )}
@@ -344,10 +345,25 @@ export default function MainPage() {
 
             {/* Daftar nomor grouped by cabor */}
             {grouped.length === 0 ? (
-              <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 py-16 text-center">
-                <p className="text-sm text-gray-400 dark:text-gray-500">
-                  Belum ada nomor tersedia. Pastikan Tahap 1 sudah disubmit dengan cabor yang aktif.
-                </p>
+              <div className="flex flex-col items-center justify-center py-16 gap-4">
+                <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                  <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Belum ada nomor tersedia</p>
+                  <p className="text-xs text-gray-400 mt-1">Pastikan Tahap I sudah disubmit dengan cabor yang aktif.</p>
+                </div>
+                <button
+                  onClick={() => navigate("/atlet-by-sports")}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                  Ke Tahap I: Entry By Sport
+                </button>
               </div>
             ) : (
               <div className="space-y-4">
@@ -370,16 +386,16 @@ export default function MainPage() {
                             key={item.nomor_id}
                             className={[
                               "flex items-center gap-4 px-5 py-3 transition-colors",
-                              isSubmitted
-                                ? "cursor-default"
-                                : "cursor-pointer hover:bg-gray-50/70 dark:hover:bg-gray-800/30",
+                              canToggle
+                                ? "cursor-pointer hover:bg-gray-50/70 dark:hover:bg-gray-800/30"
+                                : "cursor-default",
                               isToggling ? "opacity-60" : "",
                             ].join(" ")}
                           >
                             {/* Checkbox */}
                             <div className="shrink-0">
-                              {isSubmitted ? (
-                                // Read-only saat SUBMITTED
+                              {!canToggle ? (
+                                // Read-only saat tidak bisa toggle
                                 <div className={[
                                   "w-5 h-5 rounded border-2 flex items-center justify-center",
                                   item.terdaftar
@@ -404,7 +420,7 @@ export default function MainPage() {
                             </div>
 
                             {/* Info nomor */}
-                            <div className="flex-1 min-w-0" onClick={() => !isSubmitted && handleToggle(item)}>
+                            <div className="flex-1 min-w-0" onClick={() => canToggle && handleToggle(item)}>
                               <span className="text-sm font-medium text-gray-800 dark:text-white">
                                 {item.nama_nomor}
                               </span>

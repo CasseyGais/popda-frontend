@@ -9,6 +9,7 @@ import {
   upsertTahap1Cabor,
   deleteTahap1Cabor,
   submitTahap1,
+  resetTahap1,
   MasterCabor,
   TrxKontingenCabor,
   Tahap1Status,
@@ -17,6 +18,7 @@ import { pengaturanTahapService, PengaturanTahap } from "../../PengaturanTahap/s
 import CaborEntryModal from "../components/Modal";
 import ExportButtons from "../../../components/ui/ExportButtons";
 import { exportTahap1PDF, exportTahap1Excel } from "../../../utils/exportHelper";
+import { ResetTahapButton } from "../../../components/popda/ResetTahapButton";
 
 export interface CaborEntry {
   cabor_id: number;
@@ -127,8 +129,17 @@ export default function MainPage() {
   const isSubmitted    = tahap1Status === "SUBMITTED";
   // Superadmin selalu lolos meski tahap tutup — untuk monitoring
   const tahapTutup     = !isSuperAdmin && pengaturan !== null && !pengaturan.is_open;
-  const canEdit        = !isSubmitted && !tahapTutup;
+  // Superadmin selalu bisa edit/hapus, admin biasa dibatasi status & tahap
+  const canEdit        = isSuperAdmin || (!isSubmitted && !tahapTutup);
   const canSubmit      = !isSubmitted && !tahapTutup && entries.length > 0;
+  // Superadmin bisa reset ke DRAFT kapan saja data sudah SUBMITTED
+  const canReset       = isSuperAdmin && isSubmitted;
+
+  const handleReset = async () => {
+    // territoryId pasti ada karena canReset hanya true jika isSuperAdmin (sudah pilih territory)
+    await resetTahap1(territoryId!);
+    await fetchAll(territoryId);
+  };
 
   const openAdd = (cabor: MasterCabor) => {
     setActiveEntry({
@@ -237,6 +248,9 @@ export default function MainPage() {
               />
             )}
             {!loading && <StatusBadge status={tahap1Status} />}
+            {!loading && canReset && (
+              <ResetTahapButton tahap={1} onReset={handleReset} />
+            )}
           </div>
         </div>
 
@@ -258,18 +272,6 @@ export default function MainPage() {
                 </p>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Banner submitted */}
-        {isSubmitted && (
-          <div className="rounded-xl border border-green-200 bg-green-50 dark:border-green-800/40 dark:bg-green-900/20 px-5 py-3 flex items-center gap-3">
-            <svg className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-sm font-medium text-green-700 dark:text-green-400">
-              Tahap 1 sudah disubmit.
-            </p>
           </div>
         )}
 
@@ -300,15 +302,6 @@ export default function MainPage() {
             <p className="text-sm text-blue-700 dark:text-blue-400">Tahap 1 sedang menunggu validasi dari panitia.</p>
           </div>
         )}
-        {!loading && isSubmitted && validasiStatus === "VALID" && (
-          <div className="rounded-xl border border-green-300 bg-green-50 dark:border-green-700/40 dark:bg-green-900/20 px-5 py-3 flex items-center gap-3">
-            <svg className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-            <p className="text-sm font-medium text-green-700 dark:text-green-400">Tahap 1 telah divalidasi oleh panitia. ✅</p>
-          </div>
-        )}
-
         {error && (
           <div className="rounded-xl border border-red-200 bg-red-50 dark:border-red-800/40 dark:bg-red-900/20 px-5 py-3">
             <p className="text-sm text-red-600 dark:text-red-400">{error}</p>

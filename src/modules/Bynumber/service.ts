@@ -92,6 +92,18 @@ export const batalNomor = async (
 };
 
 /**
+ * POST /admin/tahap2/reset
+ * Reset status tahap2 ke DRAFT — SUPERADMIN only.
+ * territoryId wajib karena hanya superadmin yang bisa akses endpoint ini.
+ */
+export const resetTahap2 = (
+  territoryId: number
+): Promise<{ success: boolean; message: string }> =>
+  api
+    .post("/admin/tahap2/reset", null, { params: { territory_id: territoryId } })
+    .then(r => r.data);
+
+/**
  * POST /admin/tahap2/submit
  * Kunci tahap 2. Tidak perlu body.
  * - Superadmin wajib kirim ?territory_id=X

@@ -252,20 +252,19 @@ export const deleteAtlet = (
   return api.delete(`/admin/tahap3/atlet/${id}`, { params }).then(r => r.data);
 };
 
-/** PUT /admin/tahap3/atlet/:id/foto */
+/** PUT /admin/tahap3/atlet/:id/foto — territoryId wajib untuk superadmin */
 export const uploadFotoAtlet = async (
   id: number,
-  file: File
+  file: File,
+  territoryId?: number
 ): Promise<{ success: boolean; message: string; path: string }> => {
   const fd = new FormData();
   fd.append("foto", file);
-  return fetchJson(`${BASE_URL}/admin/tahap3/atlet/${id}/foto`, {
-    method: "PUT",
-    body: fd,
-  });
+  const url = `${BASE_URL}/admin/tahap3/atlet/${id}/foto${territoryId ? `?territory_id=${territoryId}` : ""}`;
+  return fetchJson(url, { method: "PUT", body: fd });
 };
 
-/** PUT /admin/tahap3/atlet/:id/file/:kolom */
+/** PUT /admin/tahap3/atlet/:id/file/:kolom — territoryId wajib untuk superadmin */
 export const uploadFileAtlet = async (
   id: number,
   kolom:
@@ -274,14 +273,13 @@ export const uploadFileAtlet = async (
     | "file_kk"
     | "file_surat_keterangan_sekolah"
     | "file_surat_izin_ortu",
-  file: File
+  file: File,
+  territoryId?: number
 ): Promise<{ success: boolean; message: string; path: string }> => {
   const fd = new FormData();
   fd.append("file", file);
-  return fetchJson(`${BASE_URL}/admin/tahap3/atlet/${id}/file/${kolom}`, {
-    method: "PUT",
-    body: fd,
-  });
+  const url = `${BASE_URL}/admin/tahap3/atlet/${id}/file/${kolom}${territoryId ? `?territory_id=${territoryId}` : ""}`;
+  return fetchJson(url, { method: "PUT", body: fd });
 };
 
 // ─── Pelatih endpoints (/admin/master/pelatih) ───────────
@@ -340,35 +338,35 @@ export const deletePelatih = (
 /**
  * PUT /admin/master/pelatih/:id/foto
  * Upload foto via multipart/form-data, field name: foto
+ * territoryId wajib untuk superadmin.
  */
 export const uploadFotoPelatih = async (
   id: number,
-  file: File
+  file: File,
+  territoryId?: number
 ): Promise<{ success: boolean; message: string; path: string }> => {
   const fd = new FormData();
   fd.append("foto", file);
-  return fetchJson(`${BASE_URL}/admin/master/pelatih/${id}/foto`, {
-    method: "PUT",
-    body: fd,
-  });
+  const url = `${BASE_URL}/admin/master/pelatih/${id}/foto${territoryId ? `?territory_id=${territoryId}` : ""}`;
+  return fetchJson(url, { method: "PUT", body: fd });
 };
 
 /**
  * PUT /admin/master/pelatih/:id/file/:kolom
  * Upload dokumen via multipart/form-data, field name: file
  * Kolom valid: file_ktp | file_surat_tugas | file_sertifikat_pelatih
+ * territoryId wajib untuk superadmin.
  */
 export const uploadFilePelatih = async (
   id: number,
   kolom: "file_ktp" | "file_surat_tugas" | "file_sertifikat_pelatih",
-  file: File
+  file: File,
+  territoryId?: number
 ): Promise<{ success: boolean; message: string; path: string }> => {
   const fd = new FormData();
   fd.append("file", file);
-  return fetchJson(`${BASE_URL}/admin/master/pelatih/${id}/file/${kolom}`, {
-    method: "PUT",
-    body: fd,
-  });
+  const url = `${BASE_URL}/admin/master/pelatih/${id}/file/${kolom}${territoryId ? `?territory_id=${territoryId}` : ""}`;
+  return fetchJson(url, { method: "PUT", body: fd });
 };
 
 // ─── Pelatih Transaksi (/admin/master/pelatih/trx) ───────
@@ -462,35 +460,35 @@ export const deleteOfficial = (
 /**
  * PUT /admin/master/official/:id/foto
  * Upload foto via multipart/form-data, field name: foto
+ * territoryId wajib untuk superadmin.
  */
 export const uploadFotoOfficial = async (
   id: number,
-  file: File
+  file: File,
+  territoryId?: number
 ): Promise<{ success: boolean; message: string; path: string }> => {
   const fd = new FormData();
   fd.append("foto", file);
-  return fetchJson(`${BASE_URL}/admin/master/official/${id}/foto`, {
-    method: "PUT",
-    body: fd,
-  });
+  const url = `${BASE_URL}/admin/master/official/${id}/foto${territoryId ? `?territory_id=${territoryId}` : ""}`;
+  return fetchJson(url, { method: "PUT", body: fd });
 };
 
 /**
  * PUT /admin/master/official/:id/file/:kolom
  * Upload dokumen via multipart/form-data, field name: file
  * Kolom valid: file_ktp | file_surat_tugas
+ * territoryId wajib untuk superadmin.
  */
 export const uploadFileOfficial = async (
   id: number,
   kolom: "file_ktp" | "file_surat_tugas",
-  file: File
+  file: File,
+  territoryId?: number
 ): Promise<{ success: boolean; message: string; path: string }> => {
   const fd = new FormData();
   fd.append("file", file);
-  return fetchJson(`${BASE_URL}/admin/master/official/${id}/file/${kolom}`, {
-    method: "PUT",
-    body: fd,
-  });
+  const url = `${BASE_URL}/admin/master/official/${id}/file/${kolom}${territoryId ? `?territory_id=${territoryId}` : ""}`;
+  return fetchJson(url, { method: "PUT", body: fd });
 };
 
 // ─── Official Transaksi (/admin/master/official/trx) ─────
@@ -584,6 +582,18 @@ export const getTahap3Status = async (territoryId?: number): Promise<{
     tahap3_validasi_catatan:  d?.tahap3_validasi_catatan   ?? null,
   };
 };
+
+/**
+ * POST /admin/tahap3/reset
+ * Reset status tahap3 ke DRAFT — SUPERADMIN only.
+ * territoryId wajib karena hanya superadmin yang bisa akses endpoint ini.
+ */
+export const resetTahap3 = (
+  territoryId: number
+): Promise<{ success: boolean; message: string }> =>
+  api
+    .post("/admin/tahap3/reset", null, { params: { territory_id: territoryId } })
+    .then(r => r.data);
 
 /**
  * POST /admin/tahap3/submit

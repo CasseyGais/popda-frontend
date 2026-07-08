@@ -1,8 +1,8 @@
+import { useState } from "react";
 import type { RekapPelatih } from "../service";
+import BiodataModal from "./BiodataModal";
 
-interface Props {
-  pelatihs: RekapPelatih[];
-}
+interface Props { pelatihs: RekapPelatih[]; }
 
 function JKBadge({ jk }: { jk: "L" | "P" }) {
   return (
@@ -10,14 +10,15 @@ function JKBadge({ jk }: { jk: "L" | "P" }) {
       jk === "L"
         ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
         : "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400"
-    }`}>
-      {jk}
-    </span>
+    }`}>{jk}</span>
   );
 }
 
 export default function RekapPelatihTable({ pelatihs }: Props) {
+  const [selected, setSelected] = useState<RekapPelatih | null>(null);
+
   return (
+    <>
     <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
       <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
         <h3 className="text-sm font-semibold text-gray-800 dark:text-white">Pelatih</h3>
@@ -25,12 +26,20 @@ export default function RekapPelatihTable({ pelatihs }: Props) {
           {pelatihs.length}
         </span>
       </div>
-
       {pelatihs.length === 0 ? (
         <p className="py-10 text-center text-sm text-gray-400">Belum ada pelatih.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
+            <colgroup>
+              <col className="w-10" />
+              <col className="w-48" />
+              <col className="w-14" />
+              <col className="w-32" />
+              <col className="w-36" />
+              <col />
+              <col className="w-16" />
+            </colgroup>
             <thead className="bg-gray-50 dark:bg-gray-800/50 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
               <tr>
                 <th className="px-4 py-3 text-left">No</th>
@@ -39,6 +48,7 @@ export default function RekapPelatihTable({ pelatihs }: Props) {
                 <th className="px-4 py-3 text-left">Jabatan</th>
                 <th className="px-4 py-3 text-left">No. HP</th>
                 <th className="px-4 py-3 text-left">Cabor</th>
+                <th className="px-4 py-3 text-center">Detail</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
@@ -62,6 +72,16 @@ export default function RekapPelatihTable({ pelatihs }: Props) {
                       </div>
                     )}
                   </td>
+                  <td className="px-4 py-3 text-center">
+                    <button type="button" onClick={() => setSelected(p)}
+                      className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg border border-blue-200/70 dark:border-blue-800/40 transition-colors"
+                      title="Lihat biodata">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -69,5 +89,11 @@ export default function RekapPelatihTable({ pelatihs }: Props) {
         </div>
       )}
     </div>
+    <BiodataModal
+      isOpen={!!selected}
+      onClose={() => setSelected(null)}
+      person={selected ? { tipe: "pelatih", data: selected } : null}
+    />
+    </>
   );
 }

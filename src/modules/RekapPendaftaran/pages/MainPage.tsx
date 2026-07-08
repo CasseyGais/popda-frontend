@@ -82,9 +82,6 @@ export default function MainPage() {
             <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
               {data?.nama_kontingen ?? (currentTerritory?.name ?? "")}
             </p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Data ini bersifat read-only. Untuk mengubah data, gunakan halaman Tahap masing-masing.
-            </p>
           </div>
           {/* Shortcut ke halaman tahap */}
           <div className="flex gap-2 flex-wrap">
@@ -165,36 +162,36 @@ export default function MainPage() {
             {/* ── Summary count ── */}
             <div className="flex flex-wrap gap-3">
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                Atlet: <strong className="ml-1">{data.atlets.length}</strong>
+                Atlet: <strong className="ml-1">{(data.atlets ?? []).length}</strong>
               </span>
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                Pelatih: <strong className="ml-1">{data.pelatihs.length}</strong>
+                Pelatih: <strong className="ml-1">{(data.pelatihs ?? []).length}</strong>
               </span>
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
-                Official: <strong className="ml-1">{data.officials.length}</strong>
+                Official: <strong className="ml-1">{(data.officials ?? []).length}</strong>
               </span>
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
-                Cabor: <strong className="ml-1">{data.cabor_terpilih.length}</strong>
+                Cabor: <strong className="ml-1">{(data.cabor_terpilih ?? []).length}</strong>
               </span>
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
-                Nomor: <strong className="ml-1">{data.nomor_terdaftar.length}</strong>
+                Nomor: <strong className="ml-1">{(data.nomor_terdaftar ?? []).length}</strong>
               </span>
             </div>
 
             {/* ── Cabor & Nomor ── */}
             <RekapCaborNomor
-              cabor_terpilih={data.cabor_terpilih}
-              nomor_terdaftar={data.nomor_terdaftar}
+              cabor_terpilih={data.cabor_terpilih ?? []}
+              nomor_terdaftar={data.nomor_terdaftar ?? []}
             />
 
             {/* ── Atlet ── */}
-            <RekapAtletTable atlets={data.atlets} />
+            <RekapAtletTable atlets={data.atlets ?? []} />
 
             {/* ── Pelatih ── */}
-            <RekapPelatihTable pelatihs={data.pelatihs} />
+            <RekapPelatihTable pelatihs={data.pelatihs ?? []} />
 
             {/* ── Official ── */}
-            <RekapOfficialTable officials={data.officials} />
+            <RekapOfficialTable officials={data.officials ?? []} />
           </>
         )}
       </div>

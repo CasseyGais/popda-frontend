@@ -19,13 +19,6 @@ interface Props {
 
 const EMPTY: PelatihPayload = { nama_lengkap: "", jenis_kelamin: "L", kabupaten_kota: "", no_hp: "" };
 
-const STATUS_COLOR: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
-  terdaftar: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  terverifikasi: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-  ditolak: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-};
-
 // Foto punya endpoint terpisah: PUT /admin/master/pelatih/:id/foto
 // Dokumen pakai: PUT /admin/master/pelatih/:id/file/:kolom
 type PelatihFileKolom = "file_ktp" | "file_surat_tugas" | "file_sertifikat_pelatih";
@@ -36,56 +29,13 @@ const PELATIH_DOCS: { kolom: PelatihFileKolom; label: string; accept: string }[]
   { kolom: "file_sertifikat_pelatih", label: "Sertifikat Pelatih", accept: ".jpg,.jpeg,.png,.pdf" },
 ];
 
-function FileRow({ label, accept, currentPath, onUpload, uploading }: {
-  label: string; accept: string;
-  currentPath: string | null | undefined;
-  onUpload: (f: File) => Promise<void>;
-  uploading: boolean;
-}) {
-  const [file, setFile]   = useState<File | null>(null);
-  const [busy, setBusy]   = useState(false);
-  const [done, setDone]   = useState(false);
-
-  const handleUpload = async () => {
-    if (!file) return;
-    setBusy(true);
-    try { await onUpload(file); setDone(true); setFile(null); }
-    finally { setBusy(false); }
-  };
-
-  return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{label}</span>
-        {currentPath && !done && (
-          <a href={currentPath} target="_blank" rel="noopener noreferrer"
-            className="text-xs text-brand-500 hover:underline">Lihat</a>
-        )}
-        {done && <span className="text-xs text-green-600 dark:text-green-400 font-medium">✓ Terupload</span>}
-      </div>
-      <div className="flex items-center gap-2">
-        <input type="file" accept={accept} onChange={e => { setFile(e.target.files?.[0] ?? null); setDone(false); }}
-          className="flex-1 text-xs text-gray-500 dark:text-gray-400
-            file:mr-2 file:py-1 file:px-2 file:rounded file:border-0
-            file:text-xs file:bg-gray-100 file:text-gray-700
-            dark:file:bg-gray-700 dark:file:text-gray-200" />
-        <button type="button" onClick={handleUpload}
-          disabled={!file || busy || uploading}
-          className="shrink-0 px-2.5 py-1 rounded bg-brand-500 hover:bg-brand-600 text-white text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed">
-          {busy ? "..." : "Upload"}
-        </button>
-      </div>
-      {!currentPath && !done && <p className="text-xs text-gray-400">Belum ada file</p>}
-    </div>
-  );
-}
-
 export default function PelatihModal({ isOpen, onClose, mode, data, territoryId, onSuccess }: Props) {
   const [form, setForm]     = useState<PelatihPayload>(EMPTY);
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState("");
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
+  const [docFiles, setDocFiles] = useState<Partial<Record<PelatihFileKolom, File>>>({});
   const [localData, setLocalData] = useState<MasterPelatih | null>(null);
-  const [anyUploading, setAnyUploading] = useState(false);
 
   const isView = mode === "view";
   const activeData = localData ?? data;
@@ -99,7 +49,7 @@ export default function PelatihModal({ isOpen, onClose, mode, data, territoryId,
 
   useEffect(() => {
     if (!isOpen) return;
-    setError(""); setLocalData(null);
+    setError(""); setLocalData(null); setFotoFile(null); setDocFiles({});
     if (data && mode !== "create") {
       setForm({
         nama_lengkap: data.nama_lengkap, jenis_kelamin: data.jenis_kelamin,
@@ -123,35 +73,38 @@ export default function PelatihModal({ isOpen, onClose, mode, data, territoryId,
     if (!form.nama_lengkap || !form.kabupaten_kota || !form.no_hp) {
       setError("Lengkapi field wajib: nama, kabupaten/kota, no. HP"); return;
     }
+    if (form.nik && !/^\d{16}$/.test(form.nik)) {
+      setError("NIK harus tepat 16 digit angka"); return;
+    }
+    if (!/^\d{10,13}$/.test(form.no_hp)) {
+      setError("No. HP harus 10–13 digit angka"); return;
+    }
     setLoading(true); setError("");
     try {
-      const result = mode === "create"
-        ? (await createPelatih(form, territoryId)).data
-        : (await updatePelatih(data!.id, form, territoryId)).data;
+      let result: MasterPelatih;
+      if (mode === "create") {
+        result = (await createPelatih(form, territoryId)).data;
+        const uploads: Promise<void>[] = [];
+        if (fotoFile) uploads.push(uploadFotoPelatih(result.id, fotoFile, territoryId).then(() => {}).catch(() => {}));
+        for (const [kolom, file] of Object.entries(docFiles) as [PelatihFileKolom, File][]) {
+          if (file) uploads.push(uploadFilePelatih(result.id, kolom, file, territoryId).then(() => {}).catch(() => {}));
+        }
+        if (uploads.length) await Promise.all(uploads);
+      } else {
+        result = (await updatePelatih(data!.id, form, territoryId)).data;
+        const editUploads: Promise<void>[] = [];
+        if (fotoFile) editUploads.push(uploadFotoPelatih(result.id, fotoFile, territoryId).then(() => {}).catch(() => {}));
+        for (const [kolom, file] of Object.entries(docFiles) as [PelatihFileKolom, File][]) {
+          if (file) editUploads.push(uploadFilePelatih(result.id, kolom, file, territoryId).then(() => {}).catch(() => {}));
+        }
+        if (editUploads.length) await Promise.all(editUploads);
+      }
       onSuccess(result); onClose();
     } catch (e: any) { setError(e.message || "Gagal menyimpan pelatih"); }
     finally { setLoading(false); }
   };
 
-  /** Upload foto — endpoint terpisah: PUT /admin/master/pelatih/:id/foto */
-  const makeFotoUploader = () => async (file: File) => {
-    const id = (localData ?? data)!.id;
-    setAnyUploading(true);
-    try {
-      await uploadFotoPelatih(id, file);
-      setLocalData(prev => ({ ...(prev ?? data!), foto: URL.createObjectURL(file) }));
-    } finally { setAnyUploading(false); }
-  };
-
-  /** Upload dokumen — PUT /admin/master/pelatih/:id/file/:kolom */
-  const makeUploader = (kolom: PelatihFileKolom) => async (file: File) => {
-    const id = (localData ?? data)!.id;
-    setAnyUploading(true);
-    try {
-      await uploadFilePelatih(id, kolom, file);
-      setLocalData(prev => ({ ...(prev ?? data!), [kolom]: URL.createObjectURL(file) }));
-    } finally { setAnyUploading(false); }
-  };
+  /** Upload foto dan dokumen sekarang dilakukan di handleSave */
 
   const txtField = (label: string, key: keyof PelatihPayload, placeholder?: string, required = false) => (
     <div>
@@ -162,17 +115,12 @@ export default function PelatihModal({ isOpen, onClose, mode, data, territoryId,
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-[640px] m-4">
-      <div className="no-scrollbar relative w-full overflow-y-auto rounded-3xl bg-white dark:bg-gray-900 p-6 lg:p-8">
+    <Modal isOpen={isOpen} onClose={onClose} className={`${isView ? "max-w-[900px]" : "max-w-[640px]"} m-4`}>
+      <div className="no-scrollbar relative w-full max-h-[90vh] overflow-y-auto rounded-3xl bg-white dark:bg-gray-900 p-6 lg:p-8">
         <div className="mb-5 pr-8">
           <h4 className="text-xl font-semibold text-gray-800 dark:text-white">
             {mode === "create" ? "Tambah Pelatih" : mode === "edit" ? "Edit Pelatih" : "Detail Pelatih"}
           </h4>
-          {activeData && (
-            <span className={`mt-1 inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_COLOR[activeData.status]}`}>
-              {activeData.status}
-            </span>
-          )}
         </div>
 
         {error && (
@@ -180,11 +128,129 @@ export default function PelatihModal({ isOpen, onClose, mode, data, territoryId,
         )}
 
         <div className="custom-scrollbar max-h-[65vh] overflow-y-auto space-y-6 pr-1">
+          {/* ── Section: Upload Foto & Dokumen ── */}
+          <section>
+            <h5 className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3 border-b border-gray-100 dark:border-gray-800 pb-1.5">
+              Foto &amp; Dokumen
+            </h5>
+            {mode === "create" && (
+              <div className="space-y-3">
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-1.5">
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Foto</span>
+                  <input type="file" accept="image/jpeg,image/jpg,image/png"
+                    onChange={e => setFotoFile(e.target.files?.[0] ?? null)}
+                    className="block w-full text-xs text-gray-500 dark:text-gray-400
+                      file:mr-2 file:py-1 file:px-2 file:rounded file:border-0
+                      file:text-xs file:bg-gray-100 file:text-gray-700
+                      dark:file:bg-gray-700 dark:file:text-gray-200" />
+                  <p className="text-xs text-gray-400">JPG / PNG • Opsional</p>
+                </div>
+                {PELATIH_DOCS.map(({ kolom, label, accept }) => (
+                  <div key={kolom} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-1.5">
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{label}</span>
+                    <input type="file" accept={accept}
+                      onChange={e => {
+                        const file = e.target.files?.[0] ?? undefined;
+                        setDocFiles(prev => file ? { ...prev, [kolom]: file } : (() => { const n = { ...prev }; delete n[kolom]; return n; })());
+                      }}
+                      className="block w-full text-xs text-gray-500 dark:text-gray-400
+                        file:mr-2 file:py-1 file:px-2 file:rounded file:border-0
+                        file:text-xs file:bg-gray-100 file:text-gray-700
+                        dark:file:bg-gray-700 dark:file:text-gray-200" />
+                    <p className="text-xs text-gray-400">JPG / PNG / PDF • Opsional</p>
+                  </div>
+                ))}
+                <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-lg">
+                  Semua file akan diupload otomatis saat klik Simpan.
+                </p>
+              </div>
+            )}
+            {mode === "edit" && (
+              <div className="space-y-3">
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-1.5">
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                    Foto {activeData?.foto && <span className="text-green-600 dark:text-green-400 font-normal">✓ Ada</span>}
+                  </span>
+                  <input type="file" accept="image/jpeg,image/jpg,image/png"
+                    onChange={e => setFotoFile(e.target.files?.[0] ?? null)}
+                    className="block w-full text-xs text-gray-500 dark:text-gray-400
+                      file:mr-2 file:py-1 file:px-2 file:rounded file:border-0
+                      file:text-xs file:bg-gray-100 file:text-gray-700
+                      dark:file:bg-gray-700 dark:file:text-gray-200" />
+                  <p className="text-xs text-gray-400">JPG / PNG • Kosongkan jika tidak ingin mengubah</p>
+                </div>
+                {PELATIH_DOCS.map(({ kolom, label, accept }) => {
+                  const hasFile = !!(activeData as any)?.[kolom];
+                  return (
+                    <div key={kolom} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-1.5">
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                        {label} {hasFile && <span className="text-green-600 dark:text-green-400 font-normal">✓ Ada</span>}
+                      </span>
+                      <input type="file" accept={accept}
+                        onChange={e => {
+                          const file = e.target.files?.[0] ?? undefined;
+                          setDocFiles(prev => file ? { ...prev, [kolom]: file } : (() => { const n = { ...prev }; delete n[kolom]; return n; })());
+                        }}
+                        className="block w-full text-xs text-gray-500 dark:text-gray-400
+                          file:mr-2 file:py-1 file:px-2 file:rounded file:border-0
+                          file:text-xs file:bg-gray-100 file:text-gray-700
+                          dark:file:bg-gray-700 dark:file:text-gray-200" />
+                      <p className="text-xs text-gray-400">JPG / PNG / PDF • Kosongkan jika tidak ingin mengubah</p>
+                    </div>
+                  );
+                })}
+                <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-lg">
+                  File yang dipilih akan diupload otomatis saat klik Perbarui.
+                </p>
+              </div>
+            )}
+            {mode === "view" && (
+              <div className="flex items-center gap-6">
+                <div className="shrink-0 flex flex-col items-center w-32">
+                  {activeData?.foto ? (
+                    <img src={activeData.foto} alt="Foto"
+                      className="w-28 h-28 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700 shadow"
+                      onError={e => { e.currentTarget.src = "/images/user/placeholder.jpg"; }} />
+                  ) : (
+                    <div className="w-28 h-28 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 dark:text-brand-400 text-3xl font-bold border-2 border-brand-200 dark:border-brand-800/40">
+                      {activeData?.nama_lengkap?.split(" ").map(w => w[0]).join("").toUpperCase().slice(0,2) || "?"}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 space-y-1.5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2">Dokumen</p>
+                  {PELATIH_DOCS.map(({ kolom, label }) => {
+                    const path = (activeData as any)?.[kolom] as string | null;
+                    return (
+                      <div key={kolom} className="flex items-center justify-between py-1.5 border-b border-gray-50 dark:border-gray-800/60 last:border-0">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${path ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"}`} />
+                          <span className="text-xs text-gray-600 dark:text-gray-400">{label}</span>
+                        </div>
+                        {path ? (
+                          <a href={path} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-brand-500 hover:text-brand-600 font-medium">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                            Buka
+                          </a>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">Belum diupload</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </section>
+
           {/* Data Diri */}
           <section>
             <h5 className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3 border-b border-gray-100 dark:border-gray-800 pb-1.5">Data Diri</h5>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2">
+            <div className={`grid gap-4 ${isView ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2"}`}>
+              <div className={isView ? "" : "sm:col-span-2"}>
                 <Label>Nama Lengkap <span className="text-red-500">*</span></Label>
                 {isView ? <p className="text-sm text-gray-800 dark:text-white mt-1">{activeData?.nama_lengkap}</p>
                   : <Input type="text" value={form.nama_lengkap} onChange={f("nama_lengkap")} placeholder="Nama lengkap pelatih" />}
@@ -203,7 +269,13 @@ export default function PelatihModal({ isOpen, onClose, mode, data, territoryId,
                   : <Input type="date" value={form.tanggal_lahir || ""} onChange={f("tanggal_lahir")} />}
               </div>
               {txtField("Tempat Lahir", "tempat_lahir", "Kota tempat lahir")}
-              {txtField("NIK", "nik", "16 digit NIK")}
+              <div>
+                <Label>NIK</Label>
+                {isView ? <p className="text-sm text-gray-800 dark:text-white mt-1">{activeData?.nik || "—"}</p>
+                  : <Input type="text" value={form.nik || ""}
+                      onChange={e => setForm(p => ({ ...p, nik: e.target.value.replace(/\D/g, "").slice(0, 16) }))}
+                      placeholder="16 digit NIK" />}
+              </div>
               {txtField("Sekolah Asal", "sekolah_asal", "Nama sekolah/instansi")}
               {txtField("Profesi", "profesi", "Pelatih Profesional")}
               {txtField("Jabatan", "jabatan", "Pelatih Kepala")}
@@ -215,83 +287,24 @@ export default function PelatihModal({ isOpen, onClose, mode, data, territoryId,
               <div>
                 <Label>No. HP <span className="text-red-500">*</span></Label>
                 {isView ? <p className="text-sm text-gray-800 dark:text-white mt-1">{activeData?.no_hp}</p>
-                  : <Input type="text" value={form.no_hp} onChange={f("no_hp")} placeholder="08xxxxxxxxxx" />}
+                  : <Input type="text" value={form.no_hp}
+                      onChange={e => setForm(p => ({ ...p, no_hp: e.target.value.replace(/\D/g, "").slice(0, 13) }))}
+                      placeholder="08xxxxxxxxxx" />}
               </div>
               {txtField("Email", "email", "email@contoh.id")}
               {txtField("Nama Istri/Suami", "nama_istri_suami", "Opsional")}
-              <div className="sm:col-span-2">
+              <div className={isView ? "" : "sm:col-span-2"}>
                 <Label>Alamat</Label>
                 {isView ? <p className="text-sm text-gray-800 dark:text-white mt-1">{activeData?.alamat || "—"}</p>
                   : <Input type="text" value={form.alamat || ""} onChange={f("alamat")} placeholder="Alamat lengkap" />}
               </div>
             </div>
           </section>
-
-          {/* Upload Dokumen */}
-          <section>
-            <h5 className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3 border-b border-gray-100 dark:border-gray-800 pb-1.5">
-              Foto &amp; Dokumen
-            </h5>
-            {mode === "create" && (
-              <p className="text-xs text-gray-400">Foto dan dokumen bisa diupload setelah data tersimpan melalui menu Edit.</p>
-            )}
-            {mode === "edit" && data?.id && (
-              <div className="space-y-3">
-                {/* Foto — endpoint terpisah PUT /foto */}
-                <FileRow
-                  label="Foto" accept="image/*"
-                  currentPath={activeData?.foto}
-                  onUpload={makeFotoUploader()} uploading={anyUploading}
-                />
-                {/* Dokumen — PUT /file/:kolom */}
-                {PELATIH_DOCS.map(({ kolom, label, accept }) => (
-                  <FileRow key={kolom} label={label} accept={accept}
-                    currentPath={(activeData as any)?.[kolom]}
-                    onUpload={makeUploader(kolom)} uploading={anyUploading} />
-                ))}
-              </div>
-            )}
-            {mode === "view" && (
-              <div className="space-y-2">
-                {/* Foto */}
-                <div className="flex items-center gap-3">
-                  {activeData?.foto
-                    ? <img src={activeData.foto} alt="Foto" className="w-14 h-14 rounded-lg object-cover border border-gray-200 dark:border-gray-700"
-                        onError={e => { e.currentTarget.src = "/images/user/placeholder.jpg"; }} />
-                    : <div className="w-14 h-14 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                        <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                      </div>
-                  }
-                  <div>
-                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300">Foto</p>
-                    <p className="text-xs text-gray-400">{activeData?.foto ? "Ada" : "Belum diupload"}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  {PELATIH_DOCS.map(({ kolom, label }) => {
-                    const path = (activeData as any)?.[kolom] as string | null;
-                    return (
-                      <div key={kolom} className="flex items-center gap-2 py-1">
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${path ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"}`} />
-                        <span className="text-xs text-gray-500 dark:text-gray-400 flex-1">{label}</span>
-                        {path && <a href={path} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-500 hover:underline shrink-0">Lihat</a>}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </section>
         </div>
 
-        <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
-          <Button size="sm" variant="outline" onClick={onClose} disabled={loading || anyUploading}>
-            {isView ? "Tutup" : "Batal"}
-          </Button>
+        <div className="flex items-center justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
           {!isView && (
-            <Button size="sm" onClick={handleSave} disabled={loading || anyUploading}
+            <Button size="sm" onClick={handleSave} disabled={loading}
               className="bg-brand-500 hover:bg-brand-600 text-white">
               {loading ? "Menyimpan..." : mode === "create" ? "Simpan" : "Perbarui"}
             </Button>

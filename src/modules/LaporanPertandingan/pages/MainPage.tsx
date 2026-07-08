@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import PageMeta from "../../../components/common/PageMeta";
 import PageBreadcrumb from "../../../components/common/PageBreadCrumb";
+import { useAuth } from "../../../context/AuthContext";
 import {
   laporanPertandinganService,
   formatTanggalIndo,
@@ -46,6 +47,16 @@ const pemenangColor = (v: string) =>
 // ─── Main Page ────────────────────────────────────────────
 
 export default function MainPage() {
+  const { can } = useAuth();
+
+  // Permission granular — SUPERADMIN (can("*")) bypass semua
+  // STAFF_LAPANGAN perlu permission eksplisit dari backend
+  // ADMIN yang tidak punya permission ini hanya bisa view + download PDF
+  const canCreate = can("*") || can("laporan_pertandingan.create");
+  const canUpdate = can("*") || can("laporan_pertandingan.update");
+  const canDelete = can("*") || can("laporan_pertandingan.delete");
+  const canSign   = can("*") || can("laporan_pertandingan.sign");
+
   const [list, setList]       = useState<LaporanDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState("");
@@ -86,7 +97,15 @@ export default function MainPage() {
       );
       setList(data);
     } catch (e: any) {
-      setError(e.message || "Gagal memuat data laporan pertandingan");
+      // 500 dari backend (biasanya karena belum ada data / JOIN issue) —
+      // tampilkan halaman kosong saja, jangan error banner. Log ke console.
+      const status = e?.response?.status ?? 0;
+      if (status === 500 || e?.message?.includes("500")) {
+        console.warn("[LaporanPertandingan] GET 500:", e.message);
+        setList([]);
+      } else {
+        setError(e.message || "Gagal memuat data laporan pertandingan");
+      }
     } finally {
       setLoading(false);
     }
@@ -143,81 +162,86 @@ export default function MainPage() {
       <div className="space-y-6">
         <PageBreadcrumb pageTitle="Laporan Pertandingan" />
 
-        {/* ── Header ── */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
-            Laporan Pertandingan
-          </h2>
-          <div className="flex gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={openExportBatch}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-brand-200 dark:border-brand-800/40 text-brand-600 dark:text-brand-400 text-sm font-medium hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors"
+        {/* ── Header: Filter kiri, tombol aksi kanan ── */}
+        {/* ── Header: Filter kiri, tombol aksi kanan — selalu satu baris ── */}
+        <div className="flex items-start justify-between gap-3">
+          {/* Filter — boleh wrap ke bawah jika sempit */}
+          <div className="flex flex-wrap gap-3 flex-1 min-w-0">
+            <input
+              type="date"
+              value={filterTanggal}
+              onChange={e => setFilterTanggal(e.target.value)}
+              className="h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm text-gray-700 dark:text-gray-300 [&::-webkit-calendar-picker-indicator]:cursor-pointer dark:[&::-webkit-calendar-picker-indicator]:invert dark:[&::-webkit-calendar-picker-indicator]:filter"
+            />
+            <select
+              value={filterCaborId}
+              onChange={e => setFilterCaborId(e.target.value ? Number(e.target.value) : "")}
+              className="h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm text-gray-700 dark:text-gray-300"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Export PDF Batch
-            </button>
-            <button
-              type="button"
-              onClick={openCreate}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium transition-colors"
+              <option value="">Semua Cabor</option>
+              {caborDropdown.map(c => (
+                <option key={c.id} value={c.id}>{c.nama}</option>
+              ))}
+            </select>
+            <select
+              value={filterBabak}
+              onChange={e => setFilterBabak(e.target.value as Babak | "")}
+              className="h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm text-gray-700 dark:text-gray-300"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Tambah Laporan
-            </button>
+              <option value="">Semua Babak</option>
+              {BABAK_OPTIONS.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <select
+              value={filterPemenang}
+              onChange={e => setFilterPemenang(e.target.value as Pemenang | "")}
+              className="h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm text-gray-700 dark:text-gray-300"
+            >
+              <option value="">Semua Pemenang</option>
+              {PEMENANG_OPTIONS.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            {hasFilter && (
+              <button
+                type="button"
+                onClick={resetFilter}
+                className="h-9 px-3 rounded-lg text-sm text-gray-500 hover:text-red-600 dark:hover:text-red-400 border border-gray-200 dark:border-gray-700 transition-colors"
+              >
+                Reset Filter
+              </button>
+            )}
           </div>
-        </div>
 
-        {/* ── Filter ── */}
-        <div className="flex flex-wrap gap-3">
-          <input
-            type="date"
-            value={filterTanggal}
-            onChange={e => setFilterTanggal(e.target.value)}
-            className="h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm text-gray-700 dark:text-gray-300"
-          />
-          <select
-            value={filterCaborId}
-            onChange={e => setFilterCaborId(e.target.value ? Number(e.target.value) : "")}
-            className="h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm text-gray-700 dark:text-gray-300"
-          >
-            <option value="">Semua Cabor</option>
-            {caborDropdown.map(c => (
-              <option key={c.id} value={c.id}>{c.nama}</option>
-            ))}
-          </select>
-          <select
-            value={filterBabak}
-            onChange={e => setFilterBabak(e.target.value as Babak | "")}
-            className="h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm text-gray-700 dark:text-gray-300"
-          >
-            <option value="">Semua Babak</option>
-            {BABAK_OPTIONS.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-          <select
-            value={filterPemenang}
-            onChange={e => setFilterPemenang(e.target.value as Pemenang | "")}
-            className="h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm text-gray-700 dark:text-gray-300"
-          >
-            <option value="">Semua Pemenang</option>
-            {PEMENANG_OPTIONS.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-          {hasFilter && (
-            <button
-              type="button"
-              onClick={resetFilter}
-              className="h-9 px-3 rounded-lg text-sm text-gray-500 hover:text-red-600 dark:hover:text-red-400 border border-gray-200 dark:border-gray-700 transition-colors"
-            >
-              Reset Filter
-            </button>
+          {/* Tombol aksi — pojok kanan, ditampilkan sesuai permission */}
+          {(canCreate || canSign) && (
+            <div className="flex gap-2 shrink-0">
+              {canSign && (
+                <button
+                  type="button"
+                  onClick={openExportBatch}
+                  className="inline-flex items-center gap-2 px-4 py-2 h-9 rounded-lg border border-brand-200 dark:border-brand-800/40 text-brand-600 dark:text-brand-400 text-sm font-medium hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Export PDF Batch
+                </button>
+              )}
+              {canCreate && (
+                <button
+                  type="button"
+                  onClick={openCreate}
+                  className="inline-flex items-center gap-2 px-4 py-2 h-9 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Tambah Laporan
+                </button>
+              )}
+            </div>
           )}
         </div>
 
@@ -239,54 +263,56 @@ export default function MainPage() {
             {list.length === 0 ? (
               <p className="py-16 text-center text-sm text-gray-400">
                 Belum ada laporan pertandingan.{" "}
-                <button onClick={openCreate} className="text-brand-500 hover:underline">
-                  Tambah sekarang
-                </button>
+                {canCreate && (
+                  <button onClick={openCreate} className="text-brand-500 hover:underline">
+                    Tambah sekarang
+                  </button>
+                )}
               </p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 dark:bg-gray-800/50 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     <tr>
-                      <th className="px-4 py-3 text-left">No</th>
-                      <th className="px-4 py-3 text-left">Tanggal</th>
-                      <th className="px-4 py-3 text-left">Cabor / Nomor</th>
-                      <th className="px-4 py-3 text-left">Babak</th>
-                      <th className="px-4 py-3 text-left">Tim A vs Tim B</th>
-                      <th className="px-4 py-3 text-left">Hasil</th>
-                      <th className="px-4 py-3 text-left">Pemenang</th>
-                      <th className="px-4 py-3 text-center">PDF</th>
+                      <th className="px-4 py-3 text-center">No</th>
+                      <th className="px-4 py-3 text-center">Tanggal</th>
+                      <th className="px-4 py-3 text-center">Cabor / Nomor</th>
+                      <th className="px-4 py-3 text-center">Babak</th>
+                      <th className="px-4 py-3 text-center">Tim A VS Tim B</th>
+                      <th className="px-4 py-3 text-center">Hasil</th>
+                      <th className="px-4 py-3 text-center">Pemenang</th>
+                      {canSign && <th className="px-4 py-3 text-center">PDF</th>}
                       <th className="px-4 py-3 text-center">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
                     {list.map((l, i) => (
                       <tr key={l.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/20 transition-colors">
-                        <td className="px-4 py-3 text-gray-400 dark:text-gray-500">{i + 1}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-300">
-                          {/* formatTanggalIndo strip timezone sebelum parse — tidak akan Invalid Date */}
-                          <div>{formatTanggalIndo(l.tanggal_pertandingan)}</div>
-                          <div className="text-xs text-gray-400">
+                        <td className="px-4 py-3 text-sm text-center text-gray-400 dark:text-gray-500">{i + 1}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-center">
+                          <div className="text-sm text-gray-600 dark:text-gray-300">{formatTanggalIndo(l.tanggal_pertandingan)}</div>
+                          <div className="text-xs text-gray-400 mt-0.5">
                             {l.waktu_pertandingan?.slice(0, 5)} WIB
                           </div>
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="font-medium text-gray-800 dark:text-white">{l.nama_cabor}</div>
-                          <div className="text-xs text-gray-400">{l.nama_nomor}</div>
+                        <td className="px-4 py-3 text-center">
+                          <div className="text-sm font-medium text-gray-800 dark:text-white">{l.nama_cabor}</div>
+                          <div className="text-xs text-gray-400 mt-0.5">{l.nama_nomor}</div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-center">
                           <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${babakColor(l.babak)}`}>
                             {getBabakLabel(l.babak)}
                           </span>
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="text-gray-800 dark:text-white">{l.nama_kontingen_a}</div>
-                          <div className="text-xs text-gray-400">vs {l.nama_kontingen_b ?? "—"}</div>
+                        <td className="px-4 py-3 text-center">
+                          <div className="text-xs text-gray-800 dark:text-white whitespace-nowrap">{l.nama_kontingen_a}</div>
+                          <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 my-0.5">VS</div>
+                          <div className="text-xs text-gray-800 dark:text-white whitespace-nowrap">{l.nama_kontingen_b ?? "—"}</div>
                         </td>
-                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300 max-w-[140px] truncate">
+                        <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300 max-w-[140px] truncate">
                           {l.hasil_pertandingan}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-center">
                           <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${pemenangColor(l.pemenang)}`}>
                             {getPemenangLabel(l.pemenang)}
                           </span>
@@ -297,28 +323,30 @@ export default function MainPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleQuickExport(l)}
-                              disabled={exportingId === l.id}
-                              title="Export PDF tanpa tanda tangan"
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border border-red-200 dark:border-red-800/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
-                            >
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                              </svg>
-                              {exportingId === l.id ? "..." : "PDF"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => openExportSatu(l)}
-                              title="Export PDF dengan tanda tangan"
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                            >
-                              + TTD
-                            </button>
-                          </div>
+                          {canSign && (
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleQuickExport(l)}
+                                disabled={exportingId === l.id}
+                                title="Export PDF tanpa tanda tangan"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border border-red-200 dark:border-red-800/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                </svg>
+                                {exportingId === l.id ? "..." : "PDF"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openExportSatu(l)}
+                                title="Export PDF dengan tanda tangan"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                              >
+                                + TTD
+                              </button>
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-center gap-2">
@@ -333,6 +361,7 @@ export default function MainPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                               </svg>
                             </button>
+                            {canUpdate && (
                             <button
                               type="button"
                               onClick={() => openEdit(l)}
@@ -343,6 +372,8 @@ export default function MainPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                               </svg>
                             </button>
+                            )}
+                            {canDelete && (
                             <button
                               type="button"
                               onClick={() => handleDelete(l)}
@@ -353,6 +384,7 @@ export default function MainPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                               </svg>
                             </button>
+                            )}
                           </div>
                         </td>
                       </tr>

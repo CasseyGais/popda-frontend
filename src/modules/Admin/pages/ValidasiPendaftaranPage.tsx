@@ -254,42 +254,39 @@ export default function ValidasiPendaftaranPage() {
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 dark:bg-gray-800/50 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     <tr>
-                      <th className="px-5 py-3 text-left">Nama Kontingen</th>
-                      <th className="px-4 py-3 text-center">Tahap 1</th>
-                      <th className="px-4 py-3 text-center">Tahap 2</th>
-                      <th className="px-4 py-3 text-center">Tahap 3</th>
-                      <th className="px-4 py-3 text-center">Aksi</th>
+                      <th className="px-5 py-3 text-left align-middle">Nama Kontingen</th>
+                      <th className="px-4 py-3 text-center align-middle">Tahap 1</th>
+                      <th className="px-4 py-3 text-center align-middle">Tahap 2</th>
+                      <th className="px-4 py-3 text-center align-middle">Tahap 3</th>
+                      <th className="px-4 py-3 text-center align-middle">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
                     {list.map(k => (
                       <tr key={k.kontingen_id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/20 transition-colors">
-                        <td className="px-5 py-3 font-medium text-gray-800 dark:text-white">
+                        <td className="px-5 py-4 font-medium text-gray-800 dark:text-white align-middle">
                           {k.nama_kontingen}
                         </td>
                         {([1, 2, 3] as const).map(t => {
                           const td = getTahapData(k, t);
                           return (
-                            <td key={t} className="px-4 py-3 text-center">
+                            <td key={t} className="px-4 py-4 text-center align-middle">
                               {td.submit_status === "DRAFT" ? (
                                 <span className="text-xs text-gray-400">— Belum submit</span>
                               ) : (
                                 <button
                                   type="button"
                                   onClick={() => openModal(k, t)}
-                                  className="inline-flex flex-col items-center gap-0.5 group"
+                                  className="inline-flex items-center justify-center group"
                                   title="Klik untuk validasi"
                                 >
                                   <ValidasiBadge status={td.validasi_status} />
-                                  <span className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    Klik validasi
-                                  </span>
                                 </button>
                               )}
                             </td>
                           );
                         })}
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-4 py-4 text-center align-middle">
                           <button
                             type="button"
                             onClick={() => navigate(`/rekap-pendaftaran?territory_id=${k.territory_id}`)}

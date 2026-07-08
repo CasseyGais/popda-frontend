@@ -7,13 +7,19 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
   /** Permission spesifik yang dibutuhkan. Jika tidak diisi, pakai ROUTE_PERMISSIONS map. */
   requiredPermission?: string;
+  /**
+   * Daftar role yang TIDAK boleh mengakses route ini.
+   * Jika user memiliki salah satu role tersebut, akan di-redirect ke /403.
+   */
+  blockedRoles?: string[];
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requiredPermission,
+  blockedRoles,
 }) => {
-  const { isAuthenticated, isLoading, can } = useAuth();
+  const { isAuthenticated, isLoading, can, user } = useAuth();
   const location = useLocation();
 
   // Tunggu restore session dari localStorage selesai
@@ -31,7 +37,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // 2. Cek permission — prop lebih prioritas, fallback ke map
+  // 2. Cek blocked roles — role tertentu tidak boleh akses route ini sama sekali
+  const userRoleName = user?.role?.name ?? "";
+  if (blockedRoles && blockedRoles.includes(userRoleName)) {
+    return <Navigate to="/403" replace />;
+  }
+
+  // 3. Cek permission — prop lebih prioritas, fallback ke map
   const permissionToCheck = requiredPermission ?? ROUTE_PERMISSIONS[location.pathname];
 
   if (permissionToCheck && !can(permissionToCheck)) {
