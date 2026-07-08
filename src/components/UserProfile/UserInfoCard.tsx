@@ -74,7 +74,7 @@ export default function UserInfoCard({ role }: UserInfoCardProps) {
         });
 
         if (target.foto) {
-          setPreviewUrl(`http://localhost:8000${target.foto}`);
+          setPreviewUrl(`${import.meta.env.VITE_API_URL ?? "http://localhost:8080"}${target.foto}`);
         }
       } catch (error) {
         console.error("Gagal ambil data:", error);
@@ -165,7 +165,7 @@ export default function UserInfoCard({ role }: UserInfoCardProps) {
         });
 
         if (target.foto) {
-          setPreviewUrl(`http://localhost:8000${target.foto}`);
+          setPreviewUrl(`${import.meta.env.VITE_API_URL ?? "http://localhost:8080"}${target.foto}`);
         }
       }
       

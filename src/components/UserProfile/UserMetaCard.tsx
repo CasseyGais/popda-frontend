@@ -59,7 +59,7 @@ export default function UserMetaCard({ role }: UserMetaCardProps) {
             (isKetua ? "Ketua Kontingen" : "PIC/Operator"),
           location: user?.kab_kota || "Lokasi Tidak Diketahui",
           photo: foto
-            ? `http://localhost:8000${foto}`
+            ? `${import.meta.env.VITE_API_URL ?? "http://localhost:8080"}${foto}`
             : "/images/user/placeholder.jpg",
         });
       } catch (error) {
@@ -72,7 +72,7 @@ export default function UserMetaCard({ role }: UserMetaCardProps) {
             role === "ketua" ? "Ketua Kontingen" : "PIC/Operator",
           location: user?.kab_kota || "Lokasi Tidak Diketahui",
           photo: user?.avatar
-            ? `http://localhost:8000${user.avatar}`
+            ? `${import.meta.env.VITE_API_URL ?? "http://localhost:8080"}${user.avatar}`
             : "/images/user/placeholder.jpg",
         });
       }

@@ -4,7 +4,6 @@ import { Modal } from "../../../components/ui/modal";
 import Button from "../../../components/ui/button/Button";
 import Input from "../../../components/form/input/InputField";
 import Label from "../../../components/form/Label";
-import { EnvelopeIcon } from "../../../icons";
 import PhoneInput from "../../../components/form/group-input/PhoneInput";
 import FileInput from "../../../components/form/input/FileInput";
 import api from "../../../lib/api";
@@ -59,7 +58,7 @@ export default function UserInfoCard({ role, data, onUpdate }: UserInfoCardProps
       });
 
       if (foto) {
-        setPreviewUrl(`http://localhost:8000${foto}`);
+        setPreviewUrl(`${import.meta.env.VITE_API_URL ?? "http://localhost:8080"}${foto}`);
       } else {
         setPreviewUrl("/images/user/placeholder.jpg");
       }
@@ -115,7 +114,7 @@ export default function UserInfoCard({ role, data, onUpdate }: UserInfoCardProps
       // Update preview foto jika ada
       const newFoto = isKetua ? updatedData?.kepala_foto : updatedData?.pic_foto;
       if (newFoto) {
-        setPreviewUrl(`http://localhost:8000${newFoto}`);
+        setPreviewUrl(`${import.meta.env.VITE_API_URL ?? "http://localhost:8080"}${newFoto}`);
       }
 
       // Reset file input
