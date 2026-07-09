@@ -25,6 +25,6 @@ export default defineConfig({
   },
   preview: {
     // Izinkan semua host Railway (dan host lainnya) saat npm run preview
-    allowedHosts: "all",
+    allowedHosts: true,
   },
 });

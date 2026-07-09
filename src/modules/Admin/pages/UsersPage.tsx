@@ -10,7 +10,14 @@ import { EyeIcon, PencilIcon, TrashBinIcon } from "../../../icons";
 import CrudModal, { ModalMode } from "../components/CrudModal";
 import { userService, roleService, territoryService, User, Role, Territory } from "../service";
 import { useAuth } from "../../../context/AuthContext";
-import { sha256 } from "../../../utils/test-credentials";
+
+/** SHA-256 hash menggunakan Web Crypto API (browser native, tanpa library) */
+async function sha256(message: string): Promise<string> {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
 
 const EMPTY_FORM = { name: "", email: "", password: "", is_active: true };
 

@@ -1,4 +1,4 @@
-import { apiClient } from "../../shared/ApiClient";
+import api from "../../lib/api";
 
 export interface LoginPayload {
   email: string;
@@ -12,7 +12,6 @@ export interface Territory {
   type: "PROVINSI" | "KABUPATEN" | "KOTA";
 }
 
-// Type definition sesuai Postman collection response
 export interface User {
   id: number;
   name: string;
@@ -39,8 +38,5 @@ export interface LoginResponse {
 }
 
 export const login = (data: LoginPayload): Promise<LoginResponse> => {
-  return apiClient<LoginResponse>("/login", {
-    method: "POST",
-    body: data,
-  });
+  return api.post<LoginResponse>("/login", data).then(res => res.data ?? res);
 };
