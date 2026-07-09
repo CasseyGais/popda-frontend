@@ -49,10 +49,12 @@ async function fetchPermissions(
   const name = roleName.toLowerCase().replace(/[_\s]/g, "");
   if (name === "superadmin") return ["*"];
 
+  const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
+
   try {
     // 1. Ambil role IDs user
     const rolesRes = await fetch(
-      `http://localhost:8000/admin/users/${userId}/roles`,
+      `${BASE}/admin/users/${userId}/roles`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
     const rolesData = await rolesRes.json();
@@ -61,7 +63,7 @@ async function fetchPermissions(
 
     // 2. Ambil permission dari role pertama
     const permRes = await fetch(
-      `http://localhost:8000/admin/permissions/role/${roleIds[0]}`,
+      `${BASE}/admin/permissions/role/${roleIds[0]}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
     const permData = await permRes.json();

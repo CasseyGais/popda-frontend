@@ -6,7 +6,7 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: true, // Untuk CORS credentials
+  // withCredentials tidak diperlukan — auth pakai Bearer token, bukan cookie
 });
 
 api.interceptors.request.use((config) => {
