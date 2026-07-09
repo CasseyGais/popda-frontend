@@ -18,9 +18,13 @@ export default defineConfig({
     proxy: {
       // Proxy /uploads ke backend agar gambar bisa dimuat tanpa CORS issue
       "/uploads": {
-        target: "http://localhost:8000",
+        target: "http://localhost:8080",
         changeOrigin: true,
       },
     },
+  },
+  preview: {
+    // Izinkan semua host Railway (dan host lainnya) saat npm run preview
+    allowedHosts: "all",
   },
 });
