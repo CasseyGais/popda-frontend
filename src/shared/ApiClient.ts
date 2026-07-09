@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
 
 export interface ApiClientOptions {
   method?: string;
@@ -66,7 +66,6 @@ export const apiClient = async <T = any>(
       }
 
       // Untuk endpoint login: parse response dan lempar pesan dari backend
-      const contentType = response.headers.get('content-type');
       let errData: any = {};
       try {
         const text = await response.text();

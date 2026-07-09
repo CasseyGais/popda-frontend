@@ -5,7 +5,6 @@ import Button from "../../../components/ui/button/Button";
 import Input from "../../../components/form/input/InputField";
 import Label from "../../../components/form/Label";
 import Badge from "../../../components/ui/badge/Badge";
-import { TableCell, TableRow } from "../../../components/ui/table";
 import CrudModal, { ModalMode } from "../components/CrudModal";
 import { permissionService, moduleService, Permission, Module } from "../service";
 import { SearchInput, DataTable, ActionButtons } from "./UsersPage";

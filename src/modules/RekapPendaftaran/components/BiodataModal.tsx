@@ -2,7 +2,6 @@
  * BiodataModal — Modal lihat biodata (view only) di Rekap Pendaftaran.
  */
 import { Modal } from "../../../components/ui/modal";
-import Button from "../../../components/ui/button/Button";
 import type { RekapAtlet, RekapPelatih, RekapOfficial } from "../service";
 
 type Person =
@@ -16,7 +15,7 @@ interface Props {
   person: Person | null;
 }
 
-const BASE_URL = "http://localhost:8000";
+const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
 
 function resolveUrl(path: string | null | undefined): string | null {
   if (!path) return null;

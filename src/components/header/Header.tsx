@@ -9,7 +9,7 @@ interface HeaderProps {
   onToggle: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onClick, onToggle }) => {
+const Header: React.FC<HeaderProps> = ({ onToggle }) => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
 
   const toggleApplicationMenu = () => {
